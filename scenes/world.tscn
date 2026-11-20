@@ -2,24 +2,39 @@
 
 [ext_resource type="PackedScene" uid="uid://bvlpwugr0dq63" path="res://scenes/player.tscn" id="1_nnsk1"]
 [ext_resource type="Script" uid="uid://gyk1mp25tuf0" path="res://scripts/World.cs" id="1_rwgxs"]
-[ext_resource type="PackedScene" uid="uid://m38jhrq64pic" path="res://scenes/Tree.tscn" id="3_4wyf3"]
+[ext_resource type="ArrayMesh" uid="uid://bo1x7t766k6d2" path="res://assets/pine_tall.res" id="2_4wyf3"]
 
 [sub_resource type="Environment" id="Environment_rwgxs"]
+background_mode = 1
+ambient_light_source = 2
+ambient_light_energy = 0.0
+reflected_light_source = 1
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0, 0, 0, 1)
+fog_density = 1.0
+fog_depth_begin = 6.0
+fog_depth_end = 10.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.01
+volumetric_fog_emission_energy = 0.0
+volumetric_fog_length = 32.0
 
 [sub_resource type="BoxMesh" id="BoxMesh_7i42y"]
-size = Vector3(100, 1, 100)
+size = Vector3(280, 1, 280)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_nnsk1"]
-size = Vector3(100, 1, 100)
+size = Vector3(280, 1, 280)
 
-[node name="world" type="Node3D" unique_id=1050127362]
+[node name="world" type="Node3D" unique_id=1050127362 node_paths=PackedStringArray("Player")]
 script = ExtResource("1_rwgxs")
-TreeScene = ExtResource("3_4wyf3")
+TreeMesh = ExtResource("2_4wyf3")
+Player = NodePath("Player")
+TreeCount = 5000
+ForestSize = 270.0
 
 [node name="Player" parent="." unique_id=1126685206 instance=ExtResource("1_nnsk1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5200136, 0)
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=189414339]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1422270872]
 environment = SubResource("Environment_rwgxs")

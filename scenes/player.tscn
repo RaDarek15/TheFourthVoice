@@ -6,6 +6,14 @@
 radius = 0.35
 height = 1.8
 
+[sub_resource type="Animation" id="Animation_3vyb7"]
+resource_name = "idle"
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_g2els"]
+_data = {
+&"idle": SubResource("Animation_3vyb7")
+}
+
 [node name="Player" type="CharacterBody3D" unique_id=1126685206]
 script = ExtResource("1_3vyb7")
 
@@ -18,6 +26,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 
 [node name="Camera3D" type="Camera3D" parent="Head" unique_id=925242933]
 
-[node name="SpotLight3D" type="SpotLight3D" parent="Head" unique_id=423311576]
-spot_range = 17.025
-spot_angle = 21.44
+[node name="Flashlight" type="SpotLight3D" parent="Head" unique_id=423311576]
+light_energy = 2.0
+light_volumetric_fog_energy = 2.0
+spot_range = 15.0
+spot_angle = 26.44
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=2083367523]
+libraries/ = SubResource("AnimationLibrary_g2els")
