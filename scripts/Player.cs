@@ -3,7 +3,6 @@ using Godot;
 
 public partial class Player : CharacterBody3D
 {
-	
 	[Export] public float Speed = 5.0f;
 	[Export] public float MouseSensitivity = 0.002f;
 
@@ -13,15 +12,29 @@ public partial class Player : CharacterBody3D
 	public override void _Ready()
 	{
 		head = GetNode<Node3D>("Head");
-
-		flashlight = GetNode<SpotLight3D>("Head/SpotLight3D");
-		
+		flashlight = GetNode<SpotLight3D>("Head/Flashlight");
 
 		Input.MouseMode = Input.MouseModeEnum.Captured;
+
+		GD.Print("Player initialized");
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
+		if (@event is InputEventKey key &&
+			key.Pressed &&
+			!key.Echo &&
+			key.Keycode == Key.F11)
+		{
+			ToggleFullscreen();
+			return;
+		}
+
+		if (@event.IsActionPressed("toggle_flashlight"))
+		{
+			flashlight.Visible = !flashlight.Visible;
+			return;
+		}
 		if (@event is InputEventMouseMotion mouse &&
 			Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
@@ -40,11 +53,13 @@ public partial class Player : CharacterBody3D
 			head.Rotation = rotation;
 		}
 
+		// Release mouse with Escape
 		if (@event.IsActionPressed("ui_cancel"))
 		{
 			Input.MouseMode = Input.MouseModeEnum.Visible;
 		}
 
+		// Capture mouse with left click
 		if (@event is InputEventMouseButton click &&
 			click.Pressed &&
 			click.ButtonIndex == MouseButton.Left)
@@ -57,11 +72,11 @@ public partial class Player : CharacterBody3D
 	{
 		Vector3 velocity = Velocity;
 
+		// Apply gravity
 		if (!IsOnFloor())
 		{
 			velocity += GetGravity() * (float)delta;
 		}
-
 		Vector2 input = Input.GetVector(
 			"move_left",
 			"move_right",
@@ -79,4 +94,20 @@ public partial class Player : CharacterBody3D
 
 		MoveAndSlide();
 	}
+
+	private void ToggleFullscreen()
+	{
+		Window window = GetWindow();
+
+		if (window.Mode == Window.ModeEnum.Fullscreen ||
+			window.Mode == Window.ModeEnum.ExclusiveFullscreen)
+		{
+			window.Mode = Window.ModeEnum.Windowed;
+		}
+		else
+		{
+			window.Mode = Window.ModeEnum.Fullscreen;
+		}
+	}
+
 }

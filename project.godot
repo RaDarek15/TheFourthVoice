@@ -12,17 +12,23 @@ config_version=5
 
 config/name="hackathon"
 run/main_scene="uid://cdltcgqkig0bc"
-config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [display]
 
+window/size/mode=4
+window/size/initial_position_type=5
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [dotnet]
 
 project/assembly_name="hackathon"
+
+[filesystem]
+
+import/blender/enabled=false
 
 [input]
 
@@ -58,4 +64,5 @@ toggle_flashlight={
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
