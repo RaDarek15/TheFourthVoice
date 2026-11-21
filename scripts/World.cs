@@ -5,7 +5,9 @@ public partial class World : Node3D
 {
 	[Export] public Mesh TreeMesh;
 	[Export] public PackedScene CrookedTreeModel;
-	[Export] public Node3D Player;
+	[Export] public PackedScene PlayerScene;
+	[Export] public PackedScene PlayerAvatar;
+	[Export] public Marker3D PlayerSpawn;
 	[Export] public Node3D Terrain;
 	[Export] public PackedScene TrailStoneModel;
 	[Export] public PackedScene ForestStoneModel;
@@ -51,17 +53,27 @@ public partial class World : Node3D
 
 	private readonly List<TreeBatch> batches = new();
 	private readonly Dictionary<Vector2I, List<Tree>> treeCells = new();
+	private readonly Dictionary<int, Player> players = new();
+	private NetworkManager network;
 	private float updateTimer;
+
+	public Player LocalPlayer { get; private set; }
+	public Stalker Enemy { get; private set; }
+	public IEnumerable<Player> Players => players.Values;
+	public Vector3 SpawnPosition => PlayerSpawn.GlobalPosition;
+	private float PlayerSpawnClearance => SpawnClearance + (network.IsOnline ? NetworkManager.SpawnSpacing : 0f);
 
 	public override void _Ready()
 	{
-		if (TreeMesh == null || Player == null)
+		if (TreeMesh == null || PlayerScene == null || PlayerSpawn == null)
 		{
-			GD.PrintErr("Assign TreeMesh and Player!");
+			GD.PrintErr("Assign the tree mesh, player scene, and player spawn.");
 			SetProcess(false);
 			return;
 		}
 
+		network = GetNode<NetworkManager>("/root/NetworkManager");
+		Enemy = GetNodeOrNull<Stalker>("Stalker");
 		AddBatch("Forest", TreeMesh);
 		if (CrookedTreeModel != null)
 		{
@@ -73,7 +85,48 @@ public partial class World : Node3D
 		List<PlantingTile> forestFloor = GetPlantingTiles(forestOnly: true);
 		GenerateTrees(forestFloor);
 		GenerateGroundCover(forestFloor);
+		if (network.IsOnline)
+			network.RegisterWorld(this);
+		else
+			SpawnPlayer(NetworkManager.HostId, SpawnPosition, true);
 		UpdateVisibleTrees();
+	}
+
+	public override void _ExitTree()
+	{
+		if (IsInstanceValid(network))
+			network.UnregisterWorld(this);
+	}
+
+	public Player SpawnPlayer(int id, Vector3 position, bool isLocal)
+	{
+		var player = PlayerScene.Instantiate<Player>();
+		bool online = network.IsOnline;
+		Node3D parent = online ? GetNode<Node3D>("Players") : this;
+		player.Name = online ? $"Player_{id}" : "Player";
+		player.Position = parent.ToLocal(position);
+		player.ConfigurePeer(id, isLocal, online);
+		if (!isLocal && PlayerAvatar != null)
+		{
+			var avatar = PlayerAvatar.Instantiate<Node3D>();
+			avatar.Name = "Avatar";
+			avatar.Rotation = new Vector3(0f, Mathf.Pi, 0f);
+			player.AddChild(avatar);
+		}
+
+		players.Add(id, player);
+		parent.AddChild(player);
+		if (isLocal)
+			LocalPlayer = player;
+		return player;
+	}
+
+	public Player GetPlayer(int id) => players.GetValueOrDefault(id);
+
+	public void RemovePlayer(int id)
+	{
+		if (players.Remove(id, out Player player))
+			player.QueueFree();
 	}
 
 	private void AddBatch(string name, Mesh mesh)
@@ -119,6 +172,8 @@ public partial class World : Node3D
 	private void GenerateTrees(List<PlantingTile> plantingTiles)
 	{
 		var random = new RandomNumberGenerator();
+		if (network.IsOnline)
+			random.Seed = (ulong)network.WorldSeed;
 		var occupiedCells = new Dictionary<Vector2I, List<TreeFootprint>>();
 		float maxFootprintRadius = ReserveMapPropFootprints(occupiedCells);
 		foreach (TreeBatch batch in batches)
@@ -127,7 +182,8 @@ public partial class World : Node3D
 		var tallTrunk = new CylinderShape3D { Height = 3f, Radius = 0.25f };
 		var crookedBase = new CylinderShape3D { Height = 1.72f, Radius = 0.38f };
 		var crookedUpper = new CylinderShape3D { Height = 1.08f, Radius = 0.32f };
-		Vector3 spawn = ToLocal(Player.GlobalPosition);
+		Vector3 spawn = ToLocal(SpawnPosition);
+		float spawnClearance = PlayerSpawnClearance;
 		var colliders = new Node3D { Name = "TreeColliders" };
 		AddChild(colliders);
 
@@ -138,7 +194,7 @@ public partial class World : Node3D
 			float x = random.RandfRange(-forestRadius, forestRadius);
 			float z = random.RandfRange(-forestRadius, forestRadius);
 			var position = new Vector3(x, 0f, z);
-			if (new Vector2(x - spawn.X, z - spawn.Z).LengthSquared() < SpawnClearance * SpawnClearance)
+			if (new Vector2(x - spawn.X, z - spawn.Z).LengthSquared() < spawnClearance * spawnClearance)
 				continue;
 
 			if (Terrain != null && !TryGetPlantingPosition(plantingTiles, ref position))
@@ -185,9 +241,9 @@ public partial class World : Node3D
 		var random = new RandomNumberGenerator { Seed = 4217 };
 		var occupiedCells = new Dictionary<Vector2I, List<TreeFootprint>>();
 		float maxRadius = Mathf.Max(2f, ReserveMapPropFootprints(occupiedCells));
-		Vector3 spawn = ToLocal(Player.GlobalPosition);
+		Vector3 spawn = ToLocal(SpawnPosition);
 		spawn.Y = 0f;
-		ReserveFootprint(occupiedCells, new TreeFootprint(spawn, SpawnClearance));
+		ReserveFootprint(occupiedCells, new TreeFootprint(spawn, PlayerSpawnClearance));
 		foreach (Node3D tree in GetNode<Node3D>("TreeColliders").GetChildren())
 		{
 			Vector3 center = tree.Position;
@@ -511,7 +567,10 @@ public partial class World : Node3D
 
 	private void UpdateVisibleTrees()
 	{
-		Vector3 playerPosition = Player.GlobalPosition;
+		if (!IsInstanceValid(LocalPlayer))
+			return;
+
+		Vector3 playerPosition = LocalPlayer.GlobalPosition;
 		float distance = Mathf.Max(0f, RenderDistance);
 		float maxDistanceSquared = distance * distance;
 		Vector3 searchExtent = new(distance, 0f, distance);

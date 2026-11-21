@@ -1,18 +1,18 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dwi34pqgfn15u"]
 
-[ext_resource type="PackedScene" path="res://assets/3d-models/car.glb" id="1_car"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/phone.glb" id="2_phone"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/flashlight.glb" id="3_flashlight"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/forester_hut.glb" id="4_hut"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/hut_door.glb" id="5_door"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/wooden_bridge.glb" id="6_bridge"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/forest_sign.glb" id="7_sign"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/hunting_tower.glb" id="8_tower"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/bush_a.glb" id="9_bush"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/bush_b.glb" id="10_bush"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/rock_a.glb" id="11_rock"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/stump.glb" id="13_stump"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/mimic_silhouette.glb" id="14_silhouette"]
+[ext_resource type="PackedScene" uid="uid://ds0fm1xy3djc" path="res://assets/3d-models/car.glb" id="1_car"]
+[ext_resource type="PackedScene" uid="uid://c8o3qa2gb4l2e" path="res://assets/3d-models/phone.glb" id="2_phone"]
+[ext_resource type="PackedScene" uid="uid://c66ewmn7uvoo0" path="res://assets/3d-models/flashlight.glb" id="3_flashlight"]
+[ext_resource type="PackedScene" uid="uid://bji1wpy5bjmki" path="res://assets/3d-models/forester_hut.glb" id="4_hut"]
+[ext_resource type="PackedScene" uid="uid://dv1it7wt5ec6m" path="res://assets/3d-models/hut_door.glb" id="5_door"]
+[ext_resource type="PackedScene" uid="uid://cvmfc27t8p76o" path="res://assets/3d-models/wooden_bridge.glb" id="6_bridge"]
+[ext_resource type="PackedScene" uid="uid://8bg8hy0danx3" path="res://assets/3d-models/forest_sign.glb" id="7_sign"]
+[ext_resource type="PackedScene" uid="uid://djv31ejenqknv" path="res://assets/3d-models/hunting_tower.glb" id="8_tower"]
+[ext_resource type="PackedScene" uid="uid://q327amk423cu" path="res://assets/3d-models/bush_a.glb" id="9_bush"]
+[ext_resource type="PackedScene" uid="uid://db8581csovipx" path="res://assets/3d-models/bush_b.glb" id="10_bush"]
+[ext_resource type="PackedScene" uid="uid://ch3sjc0ap3eqi" path="res://assets/3d-models/rock_a.glb" id="11_rock"]
+[ext_resource type="PackedScene" uid="uid://cy7foylqlabi2" path="res://assets/3d-models/stump.glb" id="13_stump"]
+[ext_resource type="PackedScene" uid="uid://0uj1en8auqdk" path="res://assets/3d-models/mimic_silhouette.glb" id="14_silhouette"]
 
 [ext_resource type="PackedScene" path="res://assets/3d-models/workbench.glb" id="15_bench"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/jump_starter.glb" id="16_starter"]
@@ -77,32 +77,29 @@ radius = 0.88
 height = 0.39
 radius = 0.25
 
-[node name="MapProps" type="Node3D"]
+[node name="MapProps" type="Node3D" unique_id=589841815]
 
-[node name="Car" type="StaticBody3D" parent="."]
-position = Vector3(0, 0.15, 65)
-rotation = Vector3(0, -1.5707963, 0)
+[node name="Car" type="StaticBody3D" parent="." unique_id=1332534078]
+transform = Transform3D(7.54979e-08, 0, -1, 0, 1, 0, 1, 0, 7.54979e-08, 0, 0.15, 65)
 metadata/tree_clearance_radius = 2.6
 
-[node name="Model" parent="Car" instance=ExtResource("1_car")]
+[node name="Model" parent="Car" unique_id=314645165 instance=ExtResource("1_car")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Car"]
-position = Vector3(0, 0.71, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Car" unique_id=916829019]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.71, 0)
 shape = SubResource("Box_car")
 
-[node name="Phone" parent="Car" instance=ExtResource("2_phone")]
-position = Vector3(0.14, 0.85, -1.35)
-rotation = Vector3(-1.5707963, 0.15, 0)
+[node name="Phone" parent="Car" unique_id=1031234227 instance=ExtResource("2_phone")]
+transform = Transform3D(0.9887711, -0.14943814, 1.1282266e-08, 0, 7.54979e-08, 1, -0.14943814, -0.9887711, 7.465014e-08, 0.14, 0.85, -1.35)
 
-[node name="SpareFlashlight" parent="Car" instance=ExtResource("3_flashlight")]
-position = Vector3(-0.10, 0.87, -1.35)
-rotation = Vector3(0, -0.36, 0)
+[node name="SpareFlashlight" parent="Car" unique_id=43045461 instance=ExtResource("3_flashlight")]
+transform = Transform3D(0.9358968, 0, -0.35227424, 0, 1, 0, 0.35227424, 0, 0.9358968, -0.1, 0.87, -1.35)
 
-[node name="ForesterHut" type="StaticBody3D" parent="."]
-position = Vector3(50, 2.2, -10)
+[node name="ForesterHut" type="StaticBody3D" parent="." unique_id=2093880511]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 2.2, -10)
 metadata/tree_clearance_radius = 5.3
 
-[node name="Model" parent="ForesterHut" instance=ExtResource("4_hut")]
+[node name="Model" parent="ForesterHut" unique_id=1108938995 instance=ExtResource("4_hut")]
 
 [node name="FrontDoor" type="AnimatableBody3D" parent="ForesterHut"]
 position = Vector3(0.53, 0.216, 2.47)
@@ -166,103 +163,104 @@ shape = SubResource("Box_workbench")
 [node name="WoodenBridge" type="StaticBody3D" parent="."]
 position = Vector3(-35, 0.35, 15)
 rotation = Vector3(0, 1.5707963, 0)
+[node name="FrontDoor" parent="ForesterHut" unique_id=140127062 instance=ExtResource("5_door")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.53, 0.216, 2.47)
+
+[node name="HutCollision" type="CollisionShape3D" parent="ForesterHut" unique_id=672103147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.34, 0)
+shape = SubResource("Box_hut")
+
+[node name="PorchCollision" type="CollisionShape3D" parent="ForesterHut" unique_id=1559827594]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.98, 0.1, 3.34)
+shape = SubResource("Box_porch")
+
+[node name="WoodenBridge" type="StaticBody3D" parent="." unique_id=756603975]
+transform = Transform3D(7.54979e-08, 0, 1, 0, 1, 0, -1, 0, 7.54979e-08, -35, 0.35, 15)
 metadata/tree_clearance_radius = 5.25
 
-[node name="Model" parent="WoodenBridge" instance=ExtResource("6_bridge")]
-scale = Vector3(2.2444444, 1, 1)
+[node name="Model" parent="WoodenBridge" unique_id=455160323 instance=ExtResource("6_bridge")]
+transform = Transform3D(2.2444444, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="DeckCollision" type="CollisionShape3D" parent="WoodenBridge"]
-position = Vector3(0, -0.06, 0)
+[node name="DeckCollision" type="CollisionShape3D" parent="WoodenBridge" unique_id=1927501108]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
 shape = SubResource("Box_bridge_deck")
 
-[node name="RailCollision" type="CollisionShape3D" parent="WoodenBridge"]
-position = Vector3(0, 0.48, -0.63)
+[node name="RailCollision" type="CollisionShape3D" parent="WoodenBridge" unique_id=391326008]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, -0.63)
 shape = SubResource("Box_bridge_rail")
 
-[node name="ForestSign" type="StaticBody3D" parent="."]
-position = Vector3(23, 5.5635, -4)
-rotation = Vector3(0, 0.22, 0)
+[node name="ForestSign" type="StaticBody3D" parent="." unique_id=341561439]
+transform = Transform3D(0.97589743, 0, 0.21822962, 0, 1, 0, -0.21822962, 0, 0.97589743, 23, 5.5635, -4)
 metadata/tree_clearance_radius = 0.95
 
-[node name="Model" parent="ForestSign" instance=ExtResource("7_sign")]
+[node name="Model" parent="ForestSign" unique_id=2133320049 instance=ExtResource("7_sign")]
 
-[node name="PostCollision" type="CollisionShape3D" parent="ForestSign"]
-position = Vector3(0, 0.85, 0)
+[node name="PostCollision" type="CollisionShape3D" parent="ForestSign" unique_id=1090456513]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
 shape = SubResource("Cylinder_sign")
 
-[node name="HuntingTower" type="StaticBody3D" parent="."]
-position = Vector3(30, 5.9, -15)
-rotation = Vector3(0, -0.54, 0)
+[node name="HuntingTower" type="StaticBody3D" parent="." unique_id=1754047957]
+transform = Transform3D(0.8577087, 0, -0.514136, 0, 1, 0, 0.514136, 0, 0.8577087, 30, 5.9, -15)
 metadata/tree_clearance_radius = 2.3
 
-[node name="Model" parent="HuntingTower" instance=ExtResource("8_tower")]
+[node name="Model" parent="HuntingTower" unique_id=1139286001 instance=ExtResource("8_tower")]
 
-[node name="LegFrontLeft" type="CollisionShape3D" parent="HuntingTower"]
-position = Vector3(-0.88, 1.16, 0.79)
-rotation = Vector3(-0.10, 0, -0.12)
+[node name="LegFrontLeft" type="CollisionShape3D" parent="HuntingTower" unique_id=1028859347]
+transform = Transform3D(0.99280864, 0.119712204, 0, -0.119114146, 0.98784876, 0.09983342, 0.011951279, -0.09911548, 0.9950042, -0.88, 1.16, 0.79)
 shape = SubResource("Box_tower_leg")
 
-[node name="LegFrontRight" type="CollisionShape3D" parent="HuntingTower"]
-position = Vector3(0.88, 1.16, 0.79)
-rotation = Vector3(-0.10, 0, 0.12)
+[node name="LegFrontRight" type="CollisionShape3D" parent="HuntingTower" unique_id=150675675]
+transform = Transform3D(0.99280864, -0.119712204, 0, 0.119114146, 0.98784876, 0.09983342, -0.011951279, -0.09911548, 0.9950042, 0.88, 1.16, 0.79)
 shape = SubResource("Box_tower_leg")
 
-[node name="LegBackLeft" type="CollisionShape3D" parent="HuntingTower"]
-position = Vector3(-0.88, 1.16, -0.79)
-rotation = Vector3(0.10, 0, -0.12)
+[node name="LegBackLeft" type="CollisionShape3D" parent="HuntingTower" unique_id=1312341300]
+transform = Transform3D(0.99280864, 0.119712204, 0, -0.119114146, 0.98784876, -0.09983342, -0.011951279, 0.09911548, 0.9950042, -0.88, 1.16, -0.79)
 shape = SubResource("Box_tower_leg")
 
-[node name="LegBackRight" type="CollisionShape3D" parent="HuntingTower"]
-position = Vector3(0.88, 1.16, -0.79)
-rotation = Vector3(0.10, 0, 0.12)
+[node name="LegBackRight" type="CollisionShape3D" parent="HuntingTower" unique_id=1961108173]
+transform = Transform3D(0.99280864, -0.119712204, 0, 0.119114146, 0.98784876, -0.09983342, 0.011951279, 0.09911548, 0.9950042, 0.88, 1.16, -0.79)
 shape = SubResource("Box_tower_leg")
 
-[node name="CabinCollision" type="CollisionShape3D" parent="HuntingTower"]
-position = Vector3(0, 2.96, 0)
+[node name="CabinCollision" type="CollisionShape3D" parent="HuntingTower" unique_id=588207981]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.96, 0)
 shape = SubResource("Box_tower_cabin")
 
-[node name="LadderCollision" type="CollisionShape3D" parent="HuntingTower"]
-position = Vector3(1.43, 1.28, 0)
-rotation = Vector3(0, 0, 0.38)
+[node name="LadderCollision" type="CollisionShape3D" parent="HuntingTower" unique_id=1505020740]
+transform = Transform3D(0.9286646, -0.37092048, 0, 0.37092048, 0.9286646, 0, 0, 0, 1, 1.43, 1.28, 0)
 shape = SubResource("Box_tower_ladder")
 
-[node name="RoadsideBush" parent="." instance=ExtResource("9_bush")]
-position = Vector3(-10, 0.14, 53)
-rotation = Vector3(0, 0.63, 0)
+[node name="RoadsideBush" parent="." unique_id=1434486643 instance=ExtResource("9_bush")]
+transform = Transform3D(0.8080275, 0, 0.58914477, 0, 1, 0, -0.58914477, 0, 0.8080275, -10, 0.14, 53)
 metadata/tree_clearance_radius = 0.55
 
-[node name="HillsideBush" parent="." instance=ExtResource("10_bush")]
-position = Vector3(15, 4.99, -7)
-rotation = Vector3(0, -0.75, 0)
+[node name="HillsideBush" parent="." unique_id=986965529 instance=ExtResource("10_bush")]
+transform = Transform3D(0.73168886, 0, -0.6816388, 0, 1, 0, 0.6816388, 0, 0.73168886, 15, 4.99, -7)
 metadata/tree_clearance_radius = 0.6
 
-[node name="ClearingBush" parent="." instance=ExtResource("10_bush")]
-position = Vector3(56, 2.11, -7)
-rotation = Vector3(0, 1.24, 0)
+[node name="ClearingBush" parent="." unique_id=1179216627 instance=ExtResource("10_bush")]
+transform = Transform3D(0.3247963, 0, 0.94578403, 0, 1, 0, -0.94578403, 0, 0.3247963, 56, 2.11, -7)
 metadata/tree_clearance_radius = 0.6
 
-[node name="Boulder" type="StaticBody3D" parent="."]
-position = Vector3(-43, -0.3, 20)
-rotation = Vector3(0, -0.4, 0)
+[node name="Boulder" type="StaticBody3D" parent="." unique_id=1034078592]
+transform = Transform3D(0.921061, 0, -0.38941833, 0, 1, 0, 0.38941833, 0, 0.921061, -43, -0.3, 20)
 metadata/tree_clearance_radius = 1.65
 
-[node name="Model" parent="Boulder" instance=ExtResource("11_rock")]
+[node name="Model" parent="Boulder" unique_id=1772021217 instance=ExtResource("11_rock")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Boulder"]
-position = Vector3(0, 0.91, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Boulder" unique_id=754411901]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
 shape = SubResource("Sphere_boulder")
 
-[node name="Stump" type="StaticBody3D" parent="."]
-position = Vector3(4, 0.14, 59)
+[node name="Stump" type="StaticBody3D" parent="." unique_id=1651475998]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.14, 59)
 metadata/tree_clearance_radius = 0.45
 
-[node name="Model" parent="Stump" instance=ExtResource("13_stump")]
+[node name="Model" parent="Stump" unique_id=1481461092 instance=ExtResource("13_stump")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Stump"]
-position = Vector3(0, 0.195, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Stump" unique_id=1913932327]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.195, 0)
 shape = SubResource("Cylinder_stump")
 
-[node name="MimicSilhouette" parent="." instance=ExtResource("14_silhouette")]
-position = Vector3(64, 0.43, -24)
-rotation = Vector3(0, -0.87, 0)
+[node name="MimicSilhouette" parent="." unique_id=248025077 instance=ExtResource("14_silhouette")]
+transform = Transform3D(0.64482653, 0, -0.76432896, 0, 1, 0, 0.76432896, 0, 0.64482653, 64, 0.43, -24)
 metadata/tree_clearance_radius = 0.6
