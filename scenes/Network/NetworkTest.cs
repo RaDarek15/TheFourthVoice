@@ -11,7 +11,7 @@ public partial class NetworkTest : Node
 
 		GD.Print("NETWORK MANAGER FOUND");
 
-		Error result = network.CreateServer();
+		Error result = network.CreateServer("Test", NetworkManager.MaxPlayers);
 
 		GD.Print($"HOST RESULT: {result}");
 	}

@@ -1,0 +1,183 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/OpeningCutscene.cs" id="1_intro"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/car.glb" id="2_car"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/player.glb" id="3_cast"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="5_shape"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/phone.glb" id="6_phone"]
+[ext_resource type="AudioStream" path="res://assets/audio/intro/car.wav" id="7_engine"]
+[ext_resource type="AudioStream" path="res://assets/audio/intro/woods.wav" id="8_woods"]
+[ext_resource type="AudioStream" path="res://assets/audio/intro/footstep.wav" id="9_step"]
+[ext_resource type="AudioStream" path="res://assets/audio/intro/call_failed.wav" id="10_call"]
+[ext_resource type="AudioStream" path="res://assets/3d-models/beetpro-whistle-reverse-fun-sound-effect-33-11848.mp3" id="11_whistle"]
+
+[sub_resource type="Environment" id="Environment_intro"]
+background_mode = 1
+background_color = Color(0.025, 0.042, 0.051, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.31, 0.44, 0.55, 1)
+ambient_light_energy = 0.135
+reflected_light_source = 1
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.05, 0.075, 0.085, 1)
+fog_light_energy = 0.38
+fog_density = 0.018
+fog_sky_affect = 0.0
+
+[sub_resource type="Shader" id="Shader_vignette"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	vec2 p = (UV - vec2(0.5, 0.48)) * vec2(1.0, 0.85);
+	float shade = smoothstep(0.20, 0.66, length(p));
+	COLOR = vec4(0.012, 0.018, 0.022, shade * 0.58);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="Material_vignette"]
+shader = SubResource("Shader_vignette")
+
+[sub_resource type="SystemFont" id="SystemFont_title"]
+font_names = PackedStringArray("Georgia", "Liberation Serif", "DejaVu Serif")
+font_weight = 700
+
+[sub_resource type="FontVariation" id="FontVariation_title"]
+base_font = SubResource("SystemFont_title")
+spacing_glyph = 12
+
+[sub_resource type="SystemFont" id="SystemFont_clock"]
+font_names = PackedStringArray("Menlo", "Consolas", "DejaVu Sans Mono")
+
+[node name="Intro" type="Node3D"]
+script = ExtResource("1_intro")
+CarModel = ExtResource("2_car")
+CastModel = ExtResource("3_cast")
+SilhouetteModel = ExtResource("5_shape")
+PhoneModel = ExtResource("6_phone")
+
+[node name="Camera" type="Camera3D" parent="."]
+environment = SubResource("Environment_intro")
+near = 0.035
+far = 115.0
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-28, -58, 0)
+light_color = Color(0.51, 0.66, 0.8, 1)
+light_energy = 0.115
+light_specular = 0.3
+
+[node name="Woods" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("8_woods")
+volume_db = -22.0
+
+[node name="CarSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_engine")
+volume_db = 0.0
+
+[node name="Footstep" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_step")
+volume_db = -13.0
+
+[node name="CallFailed" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_call")
+volume_db = -8.0
+
+[node name="Whistle" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("11_whistle")
+unit_size = 6.5
+volume_db = -3.0
+max_distance = 26.0
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+layer = 12
+
+[node name="Vignette" type="ColorRect" parent="Overlay"]
+material = SubResource("Material_vignette")
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Matte" type="Control" parent="Overlay"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Top" type="ColorRect" parent="Overlay/Matte"]
+anchor_right = 1.0
+anchor_bottom = 0.085
+mouse_filter = 2
+color = Color(0.009, 0.014, 0.017, 1)
+
+[node name="Bottom" type="ColorRect" parent="Overlay/Matte"]
+anchor_top = 0.889
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.009, 0.014, 0.017, 1)
+
+[node name="Clock" type="Label" parent="Overlay"]
+anchor_left = 0.068
+anchor_top = 0.127
+anchor_right = 0.068
+anchor_bottom = 0.127
+modulate = Color(1, 1, 1, 0)
+theme_override_colors/font_color = Color(0.82, 0.88, 0.83, 1)
+theme_override_colors/font_outline_color = Color(0.015, 0.02, 0.018, 0.95)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = SubResource("SystemFont_clock")
+theme_override_font_sizes/font_size = 24
+text = "23:58"
+
+[node name="Caption" type="Label" parent="Overlay"]
+anchor_left = 0.07
+anchor_top = 0.896
+anchor_right = 0.93
+anchor_bottom = 0.975
+theme_override_colors/font_color = Color(0.93, 0.94, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Blackout" type="ColorRect" parent="Overlay"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.008, 0.014, 0.019, 1)
+
+[node name="Title" type="Label" parent="Overlay"]
+anchor_top = 0.34
+anchor_right = 1.0
+anchor_bottom = 0.66
+modulate = Color(1, 1, 1, 0)
+theme_override_colors/font_color = Color(0.89, 0.91, 0.83, 1)
+theme_override_fonts/font = SubResource("FontVariation_title")
+theme_override_font_sizes/font_size = 128
+text = "MIMIC"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Skip" type="Label" parent="Overlay"]
+anchor_left = 0.65
+anchor_right = 0.967
+anchor_bottom = 0.083
+modulate = Color(1, 1, 1, 0)
+theme_override_colors/font_color = Color(0.72, 0.77, 0.73, 1)
+theme_override_font_sizes/font_size = 14
+text = "Esc  ·  Pomiń"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Waiting" type="Label" parent="Overlay"]
+visible = false
+anchor_top = 0.47
+anchor_right = 1.0
+anchor_bottom = 0.53
+theme_override_colors/font_color = Color(0.79, 0.85, 0.81, 1)
+theme_override_font_sizes/font_size = 20
+text = "Czekanie na pozostałych graczy…"
+horizontal_alignment = 1
+vertical_alignment = 1

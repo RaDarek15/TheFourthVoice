@@ -77,6 +77,31 @@ radius = 0.88
 height = 0.39
 radius = 0.25
 
+[sub_resource type="StandardMaterial3D" id="Material_bridge_lamp"]
+albedo_color = Color(0.18, 0.175, 0.14, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="Material_bridge_bulb"]
+shading_mode = 0
+albedo_color = Color(1, 0.79, 0.56, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_bridge_lamp_post"]
+material = SubResource("Material_bridge_lamp")
+top_radius = 0.038
+bottom_radius = 0.045
+height = 1.52
+
+[sub_resource type="SphereMesh" id="Mesh_bridge_lamp_bulb"]
+material = SubResource("Material_bridge_bulb")
+radius = 0.09
+height = 0.17
+
+[sub_resource type="CylinderMesh" id="Mesh_bridge_lamp_cap"]
+material = SubResource("Material_bridge_lamp")
+top_radius = 0.09
+bottom_radius = 0.14
+height = 0.07
+
 [node name="MapProps" type="Node3D" unique_id=589841815]
 
 [node name="Car" type="StaticBody3D" parent="." unique_id=1332534078]
@@ -174,6 +199,34 @@ shape = SubResource("Box_bridge_deck")
 [node name="RailCollision" type="CollisionShape3D" parent="WoodenBridge" unique_id=391326008]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, -0.63)
 shape = SubResource("Box_bridge_rail")
+
+[node name="Lamp" type="OmniLight3D" parent="WoodenBridge"]
+position = Vector3(-3.8, 1.63, 0.93)
+light_color = Color(1, 0.69, 0.42, 1)
+light_energy = 3.0
+omni_range = 13.0
+
+[node name="Post" type="MeshInstance3D" parent="WoodenBridge/Lamp"]
+position = Vector3(0, -0.77, 0)
+mesh = SubResource("Mesh_bridge_lamp_post")
+
+[node name="Bulb" type="MeshInstance3D" parent="WoodenBridge/Lamp"]
+mesh = SubResource("Mesh_bridge_lamp_bulb")
+
+[node name="Cap" type="MeshInstance3D" parent="WoodenBridge/Lamp"]
+position = Vector3(0, 0.115, 0)
+mesh = SubResource("Mesh_bridge_lamp_cap")
+
+[node name="RoadsideSign" type="StaticBody3D" parent="."]
+position = Vector3(13.45, 0.15, 63.13)
+rotation_degrees = Vector3(0, -19, 0)
+metadata/tree_clearance_radius = 0.95
+
+[node name="Model" parent="RoadsideSign" instance=ExtResource("7_sign")]
+
+[node name="PostCollision" type="CollisionShape3D" parent="RoadsideSign"]
+position = Vector3(0, 0.85, 0)
+shape = SubResource("Cylinder_sign")
 
 [node name="ForestSign" type="StaticBody3D" parent="." unique_id=341561439]
 transform = Transform3D(0.97589743, 0, 0.21822962, 0, 1, 0, -0.21822962, 0, 0.97589743, 23, 5.5635, -4)

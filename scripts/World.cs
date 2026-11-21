@@ -6,6 +6,7 @@ public partial class World : Node3D
 	[Export] public Mesh TreeMesh;
 	[Export] public PackedScene CrookedTreeModel;
 	[Export] public PackedScene PlayerScene;
+	[Export] public PackedScene IntroScene;
 	[Export] public Marker3D PlayerSpawn;
 	[Export] public Node3D Terrain;
 	[Export] public PackedScene TrailStoneModel;
@@ -54,6 +55,9 @@ public partial class World : Node3D
 	private readonly Dictionary<Vector2I, List<Tree>> treeCells = new();
 	private readonly Dictionary<int, Player> players = new();
 	private NetworkManager network;
+	private OpeningCutscene intro;
+	private Transform3D[] openingStarts;
+	private bool introPlaying;
 	private float updateTimer;
 
 	public Player LocalPlayer { get; private set; }
@@ -86,10 +90,31 @@ public partial class World : Node3D
 		List<PlantingTile> forestFloor = GetPlantingTiles(forestOnly: true);
 		GenerateTrees(forestFloor);
 		GenerateGroundCover(forestFloor);
+		if (IntroScene != null)
+		{
+			intro = IntroScene.Instantiate<OpeningCutscene>();
+			AddChild(intro);
+			List<PlantingTile> ground = GetPlantingTiles(forestOnly: false, includeRoad: true);
+			intro.Prepare(this, point =>
+			{
+				Vector3 local = ToLocal(point);
+				TryGetPlantingPosition(ground, ref local);
+				return ToGlobal(local);
+			});
+			openingStarts = new Transform3D[NetworkManager.MaxPlayers];
+			for (int slot = 0; slot < openingStarts.Length; slot++)
+				openingStarts[slot] = intro.GetStart(slot);
+			introPlaying = true;
+			if (!network.IsOnline || Multiplayer.IsServer())
+				Enemy?.SetPhysicsProcess(false);
+		}
 		if (network.IsOnline)
 			network.RegisterWorld(this);
 		else
-			SpawnPlayer(NetworkManager.HostId, SpawnPosition, true);
+		{
+			SpawnPlayer(NetworkManager.HostId, StartPosition(0), true, network.LocalNickname);
+			StartOpening();
+		}
 		UpdateVisibleTrees();
 	}
 
@@ -99,19 +124,69 @@ public partial class World : Node3D
 			network.UnregisterWorld(this);
 	}
 
-	public Player SpawnPlayer(int id, Vector3 position, bool isLocal)
+	public Player SpawnPlayer(int id, Vector3 position, bool isLocal, string nickname)
 	{
 		var player = PlayerScene.Instantiate<Player>();
 		bool online = network.IsOnline;
 		Node3D parent = online ? GetNode<Node3D>("Players") : this;
 		player.Name = online ? $"Player_{id}" : "Player";
 		player.Position = parent.ToLocal(position);
-		player.ConfigurePeer(id, isLocal, online);
+		if (openingStarts != null)
+		{
+			foreach (Transform3D start in openingStarts)
+			{
+				if (start.Origin.IsEqualApprox(position))
+				{
+					player.Basis = parent.GlobalBasis.Inverse() * start.Basis;
+					break;
+				}
+			}
+		}
+		player.ConfigurePeer(id, isLocal, online, nickname);
 		players.Add(id, player);
 		parent.AddChild(player);
+		player.Visible = !introPlaying;
 		if (isLocal)
+		{
 			LocalPlayer = player;
+			if (introPlaying)
+			{
+				player.SetOpeningLocked(true);
+				intro.Stage(player, network.MatchNames);
+			}
+		}
 		return player;
+	}
+
+	internal void StartOpening(long startTick = -1)
+	{
+		if (introPlaying)
+			intro.Begin(startTick);
+	}
+
+	public Vector3 StartPosition(int slot)
+	{
+		if (openingStarts != null)
+			return openingStarts[slot].Origin;
+
+		float side = slot == 0 ? 0f : slot == 1 ? 1f : -1f;
+		return SpawnPosition + Vector3.Right * (NetworkManager.SpawnSpacing * side);
+	}
+
+	internal void ReleaseOpeningCamera()
+	{
+		introPlaying = false;
+		foreach (Player player in players.Values)
+			player.Show();
+		LocalPlayer.GetNode<Camera3D>("Head/Camera3D").MakeCurrent();
+		UpdateVisibleTrees();
+	}
+
+	internal void FinishOpening()
+	{
+		LocalPlayer.SetOpeningLocked(false);
+		if (!network.IsOnline || Multiplayer.IsServer())
+			Enemy?.SetPhysicsProcess(true);
 	}
 
 	public Player GetPlayer(int id) => players.GetValueOrDefault(id);
@@ -469,7 +544,7 @@ public partial class World : Node3D
 		footprints.Add(footprint);
 	}
 
-	private List<PlantingTile> GetPlantingTiles(bool forestOnly)
+	private List<PlantingTile> GetPlantingTiles(bool forestOnly, bool includeRoad = false)
 	{
 		var tiles = new List<PlantingTile>();
 		if (Terrain == null)
@@ -488,7 +563,7 @@ public partial class World : Node3D
 			for (int surface = 0; surface < mesh.GetSurfaceCount(); surface++)
 			{
 				string material = mesh.SurfaceGetMaterial(surface)?.ResourceName;
-				if (forestOnly ? material != "M_ForestLitter" : material == "M_DarkAsphalt")
+				if (forestOnly ? material != "M_ForestLitter" : !includeRoad && material == "M_DarkAsphalt")
 					continue;
 
 				var arrays = mesh.SurfaceGetArrays(surface);
@@ -558,13 +633,14 @@ public partial class World : Node3D
 		}
 	}
 
-	private void UpdateVisibleTrees()
+	internal void UpdateVisibleTrees()
 	{
-		if (!IsInstanceValid(LocalPlayer))
+		Camera3D camera = GetViewport().GetCamera3D();
+		if (!IsInstanceValid(LocalPlayer) || (introPlaying && camera == null))
 			return;
 
-		Vector3 playerPosition = LocalPlayer.GlobalPosition;
-		float distance = Mathf.Max(0f, RenderDistance);
+		Vector3 playerPosition = introPlaying ? camera.GlobalPosition : LocalPlayer.GlobalPosition;
+		float distance = introPlaying ? 48f : Mathf.Max(0f, RenderDistance);
 		float maxDistanceSquared = distance * distance;
 		Vector3 searchExtent = new(distance, 0f, distance);
 		Vector2I minCell = GetCell(playerPosition - searchExtent);
