@@ -19,6 +19,11 @@ public partial class Player : CharacterBody3D
 	private PanelContainer flashlightSlot;
 	private RayCast3D interactionRay;
 	private Label interactionHint;
+	private AudioStreamPlayer3D footsteps;
+	private AudioStreamPlayer3D whistle;
+	private ulong nextWhistleTime;
+	private Control gameMenu;
+	private Button resumeButton;
 	private bool flashlightPowered = true;
 	private bool holdingFlashlight;
 	private bool interactionRequested;
@@ -46,6 +51,10 @@ public partial class Player : CharacterBody3D
 
 	public override void _Ready()
 	{
+		footsteps = GetNode<AudioStreamPlayer3D>("Footsteps");
+		if (footsteps.Stream is AudioStreamMP3 walkingClip)
+			walkingClip.Loop = true;
+		whistle = GetNode<AudioStreamPlayer3D>("Whistle");
 		head = GetNode<Node3D>("Head");
 		flashlight = GetNode<SpotLight3D>("Head/Flashlight");
 		interactionRay = GetNode<RayCast3D>("Head/Camera3D/InteractionRay");
@@ -80,6 +89,10 @@ public partial class Player : CharacterBody3D
 		SetProcessUnhandledInput(IsLocalPlayer);
 		if (IsLocalPlayer)
 		{
+			gameMenu = GetNode<Control>("HUD/GameMenu");
+			resumeButton = gameMenu.GetNode<Button>("Center/Panel/Actions/Resume");
+			resumeButton.Pressed += () => SetGameMenuOpen(false);
+			gameMenu.GetNode<Button>("Center/Panel/Actions/MainMenu").Pressed += ReturnToMainMenu;
 			camera.MakeCurrent();
 			Input.MouseMode = Input.MouseModeEnum.Captured;
 		}
@@ -133,9 +146,27 @@ public partial class Player : CharacterBody3D
 			if (key.Keycode == Key.F8)
 			{
 				GetViewport().SetInputAsHandled();
-				GetNode<NetworkManager>("/root/NetworkManager").ReturnToTitle();
+				ReturnToMainMenu();
 				return;
 			}
+		}
+
+		if (@event.IsActionPressed("ui_cancel") ||
+			(!gameMenu.Visible && InputMap.HasAction("toggle_main_menu") && @event.IsActionPressed("toggle_main_menu")))
+		{
+			GetViewport().SetInputAsHandled();
+			SetGameMenuOpen(!gameMenu.Visible);
+			return;
+		}
+
+		if (gameMenu.Visible)
+			return;
+
+		if (@event.IsActionPressed("whistle"))
+		{
+			GetViewport().SetInputAsHandled();
+			GetNode<NetworkManager>("/root/NetworkManager").Whistle(this);
+			return;
 		}
 
 		if (@event.IsActionPressed("toggle_flashlight"))
@@ -165,9 +196,6 @@ public partial class Player : CharacterBody3D
 			head.Rotation = rotation;
 		}
 
-		if (@event.IsActionPressed("ui_cancel"))
-			Input.MouseMode = Input.MouseModeEnum.Visible;
-
 		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
 			Input.MouseMode = Input.MouseModeEnum.Captured;
 	}
@@ -182,7 +210,7 @@ public partial class Player : CharacterBody3D
 			head.Rotation = new Vector3(Mathf.Lerp(HeadPitch, targetPitch, weight), 0f, 0f);
 			return;
 		}
-		Vector2 input = Input.GetVector(
+		Vector2 input = gameMenu.Visible ? Vector2.Zero : Input.GetVector(
 			"move_left",
 			"move_right",
 			"move_forward",
@@ -204,13 +232,14 @@ public partial class Player : CharacterBody3D
 
 		Vector3 travel = GetRealVelocity();
 		travel.Y = 0f;
-		IsWalking = travel.LengthSquared() >= 0.04f;
+		IsWalking = IsOnFloor() && travel.LengthSquared() >= 0.04f;
 		IsRunning = IsWalking && sprinting;
 		UpdateAnimation();
+		UpdateFootsteps();
 
 		if (interactionRequested)
 			interactionRay.ForceRaycastUpdate();
-		HutDoor door = interactionRay.GetCollider() as HutDoor;
+		HutDoor door = gameMenu.Visible ? null : interactionRay.GetCollider() as HutDoor;
 		interactionHint.Visible = door != null;
 		if (door != null)
 		{
@@ -220,6 +249,17 @@ public partial class Player : CharacterBody3D
 		}
 		interactionRequested = false;
 	}
+
+	private void SetGameMenuOpen(bool open)
+	{
+		gameMenu.Visible = open;
+		interactionRequested = false;
+		Input.MouseMode = open ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
+		if (open)
+			resumeButton.GrabFocus();
+	}
+
+	private void ReturnToMainMenu() => GetNode<NetworkManager>("/root/NetworkManager").ReturnToTitle();
 
 	public void ApplyPose(Vector3 position, float yaw, float pitch, bool equipped, bool beamOn, bool walking, bool running, bool snap = false)
 	{
@@ -239,6 +279,37 @@ public partial class Player : CharacterBody3D
 		}
 
 		UpdateAnimation();
+		UpdateFootsteps();
+	}
+
+	public bool TryStartWhistle()
+	{
+		ulong now = Time.GetTicksMsec();
+		if (now < nextWhistleTime)
+			return false;
+
+		nextWhistleTime = now + (ulong)(System.Math.Max(1.5, whistle.Stream.GetLength()) * 1000);
+		return true;
+	}
+
+	public void PlayWhistle(Vector3 origin)
+	{
+		whistle.GlobalPosition = origin + Vector3.Up * 1.55f;
+		whistle.Play();
+	}
+
+	private void UpdateFootsteps()
+	{
+		if (!IsWalking)
+		{
+			if (footsteps.Playing)
+				footsteps.Stop();
+			return;
+		}
+
+		footsteps.PitchScale = IsRunning ? 1.3f : 1f;
+		if (!footsteps.Playing)
+			footsteps.Play();
 	}
 
 	private void UpdateAnimation()

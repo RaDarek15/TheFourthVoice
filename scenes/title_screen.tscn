@@ -1,15 +1,7 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dqn1iplendh82"]
 
-[ext_resource type="Script" path="res://scripts/TitleScreen.cs" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/title-forest.png" id="2_backdrop"]
-
-[sub_resource type="SystemFont" id="SystemFont_title"]
-font_names = PackedStringArray("Georgia", "Liberation Serif", "DejaVu Serif")
-font_weight = 700
-
-[sub_resource type="FontVariation" id="FontVariation_title"]
-base_font = SubResource("SystemFont_title")
-spacing_glyph = 5
+[ext_resource type="Script" uid="uid://cybx5cm86kpaa" path="res://scripts/TitleScreen.cs" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://y4iykidshdpe" path="res://assets/title-forest.png" id="2_backdrop"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
 offsets = PackedFloat32Array(0, 0.42, 0.82)
@@ -19,7 +11,14 @@ colors = PackedColorArray(0.01, 0.025, 0.018, 0.62, 0.01, 0.025, 0.018, 0.22, 0.
 gradient = SubResource("Gradient_shade")
 width = 512
 height = 2
-fill_to = Vector2(1, 0)
+
+[sub_resource type="SystemFont" id="SystemFont_title"]
+font_names = PackedStringArray("Georgia", "Liberation Serif", "DejaVu Serif")
+font_weight = 700
+
+[sub_resource type="FontVariation" id="FontVariation_title"]
+base_font = SubResource("SystemFont_title")
+spacing_glyph = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary"]
 content_margin_left = 18.0
@@ -27,8 +26,8 @@ content_margin_right = 18.0
 bg_color = Color(0.76, 0.81, 0.72, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
-corner_radius_bottom_left = 3
 corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_hover"]
 content_margin_left = 18.0
@@ -36,8 +35,8 @@ content_margin_right = 18.0
 bg_color = Color(0.89, 0.93, 0.84, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
-corner_radius_bottom_left = 3
 corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_secondary"]
 content_margin_left = 18.0
@@ -50,8 +49,24 @@ border_width_bottom = 1
 border_color = Color(0.36, 0.43, 0.37, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
-corner_radius_bottom_left = 3
 corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.79, 0.86, 0.75, 0.9)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_secondary_hover"]
 content_margin_left = 18.0
@@ -64,26 +79,10 @@ border_width_bottom = 1
 border_color = Color(0.66, 0.75, 0.65, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
-corner_radius_bottom_left = 3
 corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
-draw_center = false
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.79, 0.86, 0.75, 0.9)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_left = 5
-corner_radius_bottom_right = 5
-expand_margin_left = 3.0
-expand_margin_top = 3.0
-expand_margin_right = 3.0
-expand_margin_bottom = 3.0
-
-[node name="TitleScreen" type="Control"]
+[node name="TitleScreen" type="Control" unique_id=1663563401]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -92,27 +91,32 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Backdrop" type="TextureRect" parent="."]
+[node name="Backdrop" type="TextureRect" parent="." unique_id=304171651]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("2_backdrop")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="Shade" type="TextureRect" parent="."]
+[node name="Shade" type="TextureRect" parent="." unique_id=375613344]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_shade")
 expand_mode = 1
 
-[node name="Content" type="VBoxContainer" parent="."]
+[node name="Content" type="VBoxContainer" parent="." unique_id=1384730698]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.075
 anchor_right = 0.925
 anchor_bottom = 1.0
@@ -121,19 +125,19 @@ mouse_filter = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="Heading" type="VBoxContainer" parent="Content"]
+[node name="Heading" type="VBoxContainer" parent="Content" unique_id=2104464173]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 5
 
-[node name="Accent" type="ColorRect" parent="Content/Heading"]
+[node name="Accent" type="ColorRect" parent="Content/Heading" unique_id=237084593]
 custom_minimum_size = Vector2(44, 2)
 layout_mode = 2
 size_flags_horizontal = 0
 mouse_filter = 2
 color = Color(0.57, 0.69, 0.57, 1)
 
-[node name="Title" type="Label" parent="Content/Heading"]
+[node name="Title" type="Label" parent="Content/Heading" unique_id=784367945]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 0.93, 0.86, 1)
@@ -141,7 +145,7 @@ theme_override_fonts/font = SubResource("FontVariation_title")
 theme_override_font_sizes/font_size = 100
 text = "MIMIC"
 
-[node name="Hint" type="Label" parent="Content/Heading"]
+[node name="Hint" type="Label" parent="Content/Heading" unique_id=2011548039]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.73, 0.79, 0.74, 1)
@@ -149,7 +153,7 @@ theme_override_font_sizes/font_size = 17
 text = "Podaj nick. Możesz zagrać solo lub utworzyć lobby LAN."
 autowrap_mode = 2
 
-[node name="Actions" type="VBoxContainer" parent="Content"]
+[node name="Actions" type="VBoxContainer" parent="Content" unique_id=1816464874]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -166,24 +170,28 @@ placeholder_text = "Nick (1–16 znaków)"
 max_length = 16
 tooltip_text = "Litery, cyfry, spacje, myślnik lub podkreślenie."
 
-[node name="Start" type="Button" parent="Content/Actions"]
+[node name="Start" type="Button" parent="Content/Actions" unique_id=1303917636]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_colors/font_focus_color = Color(0.05, 0.08, 0.06, 1)
-theme_override_colors/font_hover_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_colors/font_pressed_color = Color(0.05, 0.08, 0.06, 1)
+theme_override_colors/font_hover_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_primary")
-theme_override_styles/hover = SubResource("StyleBoxFlat_primary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_primary_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+theme_override_styles/hover = SubResource("StyleBoxFlat_primary_hover")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_secondary")
 text = "Rozpocznij LAN"
 alignment = 0
 
 [node name="Solo" type="Button" parent="Content/Actions"]
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+text = "Start game"
+alignment = 0
+
+[node name="Host" type="Button" parent="Content/Actions" unique_id=928640343]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
@@ -191,8 +199,8 @@ theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
-theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 text = "Zagraj solo"
 alignment = 0
@@ -224,11 +232,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 text = "Utwórz lobby LAN"
 alignment = 0
 
-[node name="JoinRow" type="HBoxContainer" parent="Content/Actions"]
+[node name="JoinRow" type="HBoxContainer" parent="Content/Actions" unique_id=1976827003]
 layout_mode = 2
 theme_override_constants/separation = 7
 
-[node name="HostAddress" type="LineEdit" parent="Content/Actions/JoinRow"]
+[node name="HostAddress" type="LineEdit" parent="Content/Actions/JoinRow" unique_id=423653058]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(188, 38)
 layout_mode = 2
@@ -237,9 +245,16 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_font_sizes/font_size = 16
 placeholder_text = "Adres IP hosta"
+focus_neighbor_top = NodePath("../../Host")
+focus_neighbor_right = NodePath("../Join")
+focus_neighbor_bottom = NodePath("../../Quit")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+placeholder_text = "Host IP address"
 max_length = 45
 
-[node name="Join" type="Button" parent="Content/Actions/JoinRow"]
+[node name="Join" type="Button" parent="Content/Actions/JoinRow" unique_id=1744883384]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(97, 38)
 layout_mode = 2
@@ -257,17 +272,20 @@ unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
+focus_neighbor_left = NodePath("../HostAddress")
+focus_neighbor_top = NodePath("../../Host")
+focus_neighbor_bottom = NodePath("../../Quit")
 theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
-theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 text = "Opuść lobby"
 alignment = 0
 
-[node name="Quit" type="Button" parent="Content/Actions"]
+[node name="Quit" type="Button" parent="Content/Actions" unique_id=653369163]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
@@ -275,14 +293,15 @@ theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
-theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 text = "Wyjdź"
 alignment = 0
 
-[node name="Controls" type="Label" parent="."]
+[node name="Controls" type="Label" parent="." unique_id=2025070357]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.075
 anchor_top = 1.0
 anchor_right = 0.925
@@ -292,6 +311,6 @@ offset_bottom = -20.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.67, 0.74, 0.68, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD move   ·   Shift sprint   ·   Mouse look   ·   E interact   ·   1 / 2 inventory   ·   V flashlight"
-autowrap_mode = 2
+text = "WASD move   ·   Shift sprint   ·   Mouse look   ·   E interact   ·   1 / 2 inventory   ·   V flashlight   ·   Q whistle"
 vertical_alignment = 1
+autowrap_mode = 2

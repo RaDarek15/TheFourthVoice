@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dwi34pqgfn15u"]
 
 [ext_resource type="PackedScene" uid="uid://ds0fm1xy3djc" path="res://assets/3d-models/car.glb" id="1_car"]
-[ext_resource type="PackedScene" uid="uid://c8o3qa2gb4l2e" path="res://assets/3d-models/phone.glb" id="2_phone"]
+[ext_resource type="PackedScene" path="res://scenes/phone.tscn" id="2_phone"]
 [ext_resource type="PackedScene" uid="uid://c66ewmn7uvoo0" path="res://assets/3d-models/flashlight.glb" id="3_flashlight"]
 [ext_resource type="PackedScene" uid="uid://bji1wpy5bjmki" path="res://assets/3d-models/forester_hut.glb" id="4_hut"]
 [ext_resource type="PackedScene" uid="uid://dv1it7wt5ec6m" path="res://assets/3d-models/hut_door.glb" id="5_door"]
