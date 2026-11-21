@@ -22,7 +22,7 @@ public partial class World : Node3D
 	private const float TreeClearance = 0.5f;
 	private const string TreeClearanceMetadata = "tree_clearance_radius";
 	private const float TrailEdgeOffset = 1.35f;
-	private const float TrailStoneSpacing = 1.65f;
+	private const float TrailStoneSpacing = 0.32f;
 
 	private readonly record struct Tree(Transform3D Transform, int Variant);
 	private readonly record struct PlantingTile(Aabb Bounds, Vector3[] Faces);
@@ -214,18 +214,20 @@ public partial class World : Node3D
 			{
 				Curve3D curve = route.Curve;
 				float length = curve.GetBakedLength();
-				for (float offset = 0.6f; offset < length - 0.45f; offset += TrailStoneSpacing)
+				for (float offset = 0.3f; offset < length - 0.3f; offset += TrailStoneSpacing)
 				{
 					Vector3 tangent = (curve.SampleBaked(offset + 0.35f) - curve.SampleBaked(offset - 0.35f)).Normalized();
 					Vector3 edge = tangent.Cross(Vector3.Up);
+					float yaw = Mathf.Atan2(-tangent.Z, tangent.X);
 					for (int side = -1; side <= 1; side += 2)
 					{
-						float distance = offset + random.RandfRange(-0.25f, 0.25f);
-						float width = TrailEdgeOffset + random.RandfRange(-0.12f, 0.12f);
-						Vector3 point = curve.SampleBaked(distance) + edge * (side * width);
+						float width = TrailEdgeOffset + random.RandfRange(-0.035f, 0.035f);
+						Vector3 point = curve.SampleBaked(offset) + edge * (side * width);
 						Vector3 position = ToLocal(route.ToGlobal(point));
 						if (!IsNearTrail(routes, position, 1f, route) && TryGetPlantingPosition(terrainTiles, ref position))
-							PlaceGroundCover(batches, occupiedCells, maxRadius, trailStone, position, random.RandfRange(0.67f, 1.07f), random);
+							PlaceGroundCover(batches, occupiedCells, maxRadius, trailStone, position,
+								random.RandfRange(0.86f, 0.96f), yaw + random.RandfRange(-0.22f, 0.22f),
+								footprintPadding: -0.025f, sink: 0.012f);
 					}
 				}
 			}
@@ -260,7 +262,7 @@ public partial class World : Node3D
 					bool stone = forestStone != null && (foliage.Count == 0 || random.Randf() < 0.34f);
 					Mesh mesh = stone ? forestStone : foliage[random.RandiRange(0, foliage.Count - 1)];
 					float scale = stone ? random.RandfRange(0.16f, 0.36f) : random.RandfRange(0.8f, 1.55f);
-					PlaceGroundCover(batches, occupiedCells, maxRadius, mesh, position, scale, random);
+					PlaceGroundCover(batches, occupiedCells, maxRadius, mesh, position, scale, random.RandfRange(0f, Mathf.Tau));
 				}
 			}
 		}
@@ -286,17 +288,17 @@ public partial class World : Node3D
 	private static void PlaceGroundCover(
 		Dictionary<(Mesh Mesh, Vector2I Cell), List<Transform3D>> batches,
 		Dictionary<Vector2I, List<TreeFootprint>> occupiedCells, float maxRadius,
-		Mesh mesh, Vector3 position, float scale, RandomNumberGenerator random)
+		Mesh mesh, Vector3 position, float scale, float yaw, float footprintPadding = 0.08f, float sink = 0.04f)
 	{
 		Aabb bounds = mesh.GetAabb();
 		float x = Mathf.Max(Mathf.Abs(bounds.Position.X), Mathf.Abs(bounds.End.X));
 		float z = Mathf.Max(Mathf.Abs(bounds.Position.Z), Mathf.Abs(bounds.End.Z));
-		var footprint = new TreeFootprint(new Vector3(position.X, 0f, position.Z), new Vector2(x, z).Length() * scale + 0.08f);
+		var footprint = new TreeFootprint(new Vector3(position.X, 0f, position.Z), new Vector2(x, z).Length() * scale + footprintPadding);
 		if (!TryReserveFootprint(occupiedCells, footprint, maxRadius))
 			return;
 
-		position.Y -= 0.04f;
-		Basis basis = new Basis(Vector3.Up, random.RandfRange(0f, Mathf.Tau)).Scaled(Vector3.One * scale);
+		position.Y -= sink;
+		Basis basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
 		var key = (mesh, GetCell(position));
 		if (!batches.TryGetValue(key, out var transforms))
 		{
