@@ -6,8 +6,8 @@
 [ext_resource type="PackedScene" uid="uid://bqsm7icyx3v0c" path="res://assets/3d-models/mimic.glb" id="5_shape"]
 [ext_resource type="PackedScene" uid="uid://c8o3qa2gb4l2e" path="res://assets/3d-models/phone.glb" id="6_phone"]
 [ext_resource type="AudioStream" uid="uid://cuy2ayk6d2sxg" path="res://assets/audio/intro/car.wav" id="7_engine"]
+[ext_resource type="AudioStream" uid="uid://c18tpan3vfgq3" path="res://assets/sounds/playerWalk.mp3" id="8_kelyf"]
 [ext_resource type="AudioStream" uid="uid://c2i12gaytlb56" path="res://assets/audio/intro/woods.wav" id="8_woods"]
-[ext_resource type="AudioStream" uid="uid://bh88yhsnvfcae" path="res://assets/audio/intro/footstep.wav" id="9_step"]
 [ext_resource type="AudioStream" uid="uid://r5aoifl1bkhq" path="res://assets/audio/intro/call_failed.wav" id="10_call"]
 [ext_resource type="AudioStream" uid="uid://pw4k4hwhrexr" path="res://assets/sounds/whistle.mp3" id="11_whistle"]
 
@@ -75,7 +75,7 @@ volume_db = -22.0
 stream = ExtResource("7_engine")
 
 [node name="Footstep" type="AudioStreamPlayer" parent="." unique_id=1865620111]
-stream = ExtResource("9_step")
+stream = ExtResource("8_kelyf")
 volume_db = -13.0
 
 [node name="CallFailed" type="AudioStreamPlayer" parent="." unique_id=47484768]
@@ -103,6 +103,8 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
 [node name="Top" type="ColorRect" parent="Overlay/Matte" unique_id=1805754449]
