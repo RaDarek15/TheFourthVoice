@@ -2,7 +2,6 @@ using Godot;
 
 public partial class Stalker : CharacterBody3D
 {
-	[Export] public Player Target;
 	[Export] public Node3D Terrain;
 	[Export] public float WalkSpeed = 2.35f;
 	[Export] public float StandoffDistance = 6f;
@@ -13,11 +12,23 @@ public partial class Stalker : CharacterBody3D
 	private static readonly float[] AvoidanceAngles = { 30f, 60f, 90f, 120f };
 
 	private AnimationPlayer animationPlayer;
+	private World world;
+	private bool remoteReplica;
+	private Vector3 remotePosition;
+	private float remoteYaw;
 	private bool placed;
 	private int avoidanceSide = 1;
 
+	public bool IsPlaced => placed;
+	public bool IsWalking { get; private set; }
+
 	public override void _Ready()
 	{
+		world = GetParent() as World;
+		remoteReplica = GetNode<NetworkManager>("/root/NetworkManager").IsOnline && !Multiplayer.IsServer();
+		if (remoteReplica)
+			CollisionLayer = 0;
+		Hide();
 		var animationPlayers = GetNode("Model").FindChildren("*", "AnimationPlayer", owned: false);
 		if (animationPlayers.Count > 0)
 			animationPlayer = (AnimationPlayer)animationPlayers[0];
@@ -26,6 +37,17 @@ public partial class Stalker : CharacterBody3D
 
 	public override void _PhysicsProcess(double delta)
 	{
+		if (remoteReplica)
+		{
+			if (placed)
+			{
+				float weight = 1f - Mathf.Exp(-22f * (float)delta);
+				GlobalPosition = GlobalPosition.Lerp(remotePosition, weight);
+				Rotation = new Vector3(0f, Mathf.LerpAngle(Rotation.Y, remoteYaw, weight), 0f);
+			}
+			return;
+		}
+
 		if (!placed)
 		{
 			if (!TryPlace())
@@ -35,6 +57,7 @@ public partial class Stalker : CharacterBody3D
 				return;
 			}
 			placed = true;
+			Show();
 		}
 
 		float step = (float)delta;
@@ -55,17 +78,33 @@ public partial class Stalker : CharacterBody3D
 		Velocity = direction * WalkSpeed + Vector3.Up * verticalSpeed;
 		MoveAndSlide();
 		Vector3 movement = GetRealVelocity();
-		bool walking = IsOnFloor() && new Vector2(movement.X, movement.Z).LengthSquared() > 0.04f;
+		IsWalking = IsOnFloor() && new Vector2(movement.X, movement.Z).LengthSquared() > 0.04f;
+		PlayAnimation(IsWalking ? "Walk" : "Idle");
+	}
+
+	public void ApplyPose(Vector3 position, float yaw, bool walking)
+	{
+		remotePosition = position;
+		remoteYaw = yaw;
+		if (!placed)
+		{
+			GlobalPosition = position;
+			Rotation = new Vector3(0f, yaw, 0f);
+			placed = true;
+			Show();
+		}
+		IsWalking = walking;
 		PlayAnimation(walking ? "Walk" : "Idle");
 	}
 
 	private bool TryPlace()
 	{
-		if (!IsInstanceValid(Target) || !IsInstanceValid(Terrain))
+		Player target = world?.GetPlayer(NetworkManager.HostId);
+		if (!IsInstanceValid(target) || !IsInstanceValid(Terrain))
 			return false;
 
-		Vector3 center = Target.GlobalPosition;
-		Vector3 behind = Target.GlobalBasis.Z;
+		Vector3 center = target.GlobalPosition;
+		Vector3 behind = target.GlobalBasis.Z;
 		behind.Y = 0f;
 		behind = behind.IsZeroApprox() ? Vector3.Back : behind.Normalized();
 		var space = GetWorld3D().DirectSpaceState;
@@ -95,17 +134,27 @@ public partial class Stalker : CharacterBody3D
 	private bool TryDetectPlayer(out Vector3 bearing, out float distance)
 	{
 		bearing = Vector3.Zero;
-		distance = 0f;
-		if (!IsInstanceValid(Target) || !Target.IsFlashlightOn)
-			return false;
+		float nearest = (DetectionRange + 0.001f) * (DetectionRange + 0.001f);
+		Vector3 targetOffset = Vector3.Zero;
+		foreach (Player player in world.Players)
+		{
+			if (!player.IsFlashlightOn)
+				continue;
 
-		Vector3 offset = Target.GlobalPosition - GlobalPosition;
-		offset.Y = 0f;
-		distance = offset.Length();
-		if (distance <= 0.001f || distance > DetectionRange + 0.001f)
-			return false;
+			Vector3 offset = player.GlobalPosition - GlobalPosition;
+			offset.Y = 0f;
+			float squared = offset.LengthSquared();
+			if (squared >= nearest)
+				continue;
 
-		bearing = offset / distance;
+			nearest = squared;
+			targetOffset = offset;
+		}
+
+		distance = targetOffset.Length();
+		if (distance <= 0.001f)
+			return false;
+		bearing = targetOffset / distance;
 		return true;
 	}
 

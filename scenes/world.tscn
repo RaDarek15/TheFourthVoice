@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://assets/3d-models/rock_a.glb" id="11_forest_stone"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/bush_a.glb" id="12_bush_a"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/bush_b.glb" id="13_bush_b"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/player.glb" id="14_avatar"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1j20i"]
 resource_name = "M_Pine_Bark"
@@ -109,11 +110,13 @@ volumetric_fog_density = 0.005
 volumetric_fog_emission_energy = 0.0
 volumetric_fog_length = 32.0
 
-[node name="world" type="Node3D" unique_id=1050127362 node_paths=PackedStringArray("Player", "Terrain")]
+[node name="world" type="Node3D" unique_id=1050127362 node_paths=PackedStringArray("PlayerSpawn", "Terrain")]
 script = ExtResource("1_rwgxs")
 TreeMesh = SubResource("ArrayMesh_4mrxx")
 CrookedTreeModel = ExtResource("5_crooked")
-Player = NodePath("Player")
+PlayerScene = ExtResource("1_nnsk1")
+PlayerAvatar = ExtResource("14_avatar")
+PlayerSpawn = NodePath("PlayerSpawn")
 Terrain = NodePath("Ground")
 TrailStoneModel = ExtResource("10_trail_stone")
 ForestStoneModel = ExtResource("11_forest_stone")
@@ -121,8 +124,10 @@ FoliageModels = Array[PackedScene]([ExtResource("12_bush_a"), ExtResource("13_bu
 TreeCount = 2000
 ForestSize = 200.0
 
-[node name="Player" parent="." unique_id=1126685206 instance=ExtResource("1_nnsk1")]
+[node name="PlayerSpawn" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5200136, 0)
+
+[node name="Players" type="Node3D" parent="."]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1422270872]
 environment = SubResource("Environment_rwgxs")
@@ -133,6 +138,5 @@ environment = SubResource("Environment_rwgxs")
 
 [node name="TrailRoutes" parent="." instance=ExtResource("9_routes")]
 
-[node name="Stalker" parent="." unique_id=65511270 node_paths=PackedStringArray("Target", "Terrain") instance=ExtResource("7_stalker")]
-Target = NodePath("../Player")
+[node name="Stalker" parent="." unique_id=65511270 node_paths=PackedStringArray("Terrain") instance=ExtResource("7_stalker")]
 Terrain = NodePath("../Ground")
