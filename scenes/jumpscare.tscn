@@ -2,13 +2,33 @@
 
 [ext_resource type="Script" path="res://scripts/Jumpscare.cs" id="1_script"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="2_mimic"]
+[ext_resource type="AudioStream" path="res://assets/audio/intro/footstep.wav" id="3_step"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/pine_tall.glb" id="4_pine"]
+[ext_resource type="Texture2D" path="res://assets/3d-models/forest_terrain_200_T_ForestLitter_BC.png" id="5_litter"]
 
 [sub_resource type="Environment" id="Environment_scare"]
 background_mode = 1
-background_color = Color(0.014, 0.008, 0.009, 1)
+background_color = Color(0.017, 0.026, 0.029, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.48, 0.23, 0.2, 1)
-ambient_light_energy = 0.28
+ambient_light_color = Color(0.37, 0.51, 0.61, 1)
+ambient_light_energy = 0.25
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.017, 0.026, 0.029, 1)
+fog_density = 1.0
+fog_depth_begin = 5.5
+fog_depth_end = 13.0
+
+[sub_resource type="StandardMaterial3D" id="Material_ground"]
+albedo_color = Color(0.44, 0.48, 0.5, 1)
+albedo_texture = ExtResource("5_litter")
+metallic_specular = 0.15
+roughness = 1.0
+uv1_scale = Vector3(6, 6, 1)
+
+[sub_resource type="PlaneMesh" id="Mesh_ground"]
+material = SubResource("Material_ground")
+size = Vector2(22, 20)
 
 [node name="Jumpscare" type="SubViewportContainer"]
 visible = false
@@ -27,18 +47,46 @@ render_target_update_mode = 0
 [node name="Environment" type="WorldEnvironment" parent="Stage"]
 environment = SubResource("Environment_scare")
 
+[node name="Ground" type="MeshInstance3D" parent="Stage"]
+position = Vector3(0, -0.04, -5)
+mesh = SubResource("Mesh_ground")
+
+[node name="PineLeft" parent="Stage" instance=ExtResource("4_pine")]
+position = Vector3(-2.9, 0, -4.4)
+rotation_degrees = Vector3(0, 128, 0)
+
+[node name="PineRight" parent="Stage" instance=ExtResource("4_pine")]
+position = Vector3(2.3, 0, -5.4)
+
+[node name="PineFar" parent="Stage" instance=ExtResource("4_pine")]
+position = Vector3(-0.7, 0, -7.2)
+
 [node name="Camera" type="Camera3D" parent="Stage"]
-position = Vector3(0, 1.95, 2.2)
+position = Vector3(0, 1.72, 2.2)
 current = true
-fov = 57.0
+fov = 66.0
 near = 0.025
 
-[node name="FaceLight" type="OmniLight3D" parent="Stage"]
-position = Vector3(-0.21, 2.22, 0.78)
-light_color = Color(1, 0.65, 0.54, 1)
-light_energy = 1.45
-omni_range = 4.0
-omni_attenuation = 0.55
+[node name="FaceLight" type="OmniLight3D" parent="Stage/Camera"]
+position = Vector3(-0.46, 0.31, 0.06)
+light_color = Color(1, 0.83, 0.7, 1)
+omni_range = 5.1
+omni_attenuation = 0.8
+
+[node name="RimLight" type="DirectionalLight3D" parent="Stage"]
+rotation_degrees = Vector3(-22, 155, 0)
+light_color = Color(0.36, 0.61, 0.84, 1)
+light_energy = 0.68
+
+[node name="Blackout" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="RushStep" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_step")
+max_polyphony = 2
 
 [node name="Sting" type="AudioStreamPlayer" parent="."]
-volume_db = -8.0
+volume_db = -4.0

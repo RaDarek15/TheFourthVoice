@@ -301,7 +301,7 @@ public partial class Player : CharacterBody3D
 			escape.Interact(this, use);
 		}
 		if (escape?.RepairerId == PeerId && !gameMenu.Visible)
-			hint = $"Repairing · {Mathf.CeilToInt(EscapeObjective.RepairSeconds - escape.RepairTime)} s";
+			hint = $"Repairing ({Mathf.CeilToInt(EscapeObjective.RepairSeconds - escape.RepairTime)} s)";
 		interactionHint.Text = hint;
 		interactionHint.Visible = hint.Length != 0;
 		interactionRequested = false;

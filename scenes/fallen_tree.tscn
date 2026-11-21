@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/3d-models/fallen_tree.glb" id="1_pine"]
+
+[sub_resource type="CapsuleShape3D" id="Capsule_trunk"]
+radius = 0.29
+height = 3.85
+
+[sub_resource type="ConvexPolygonShape3D" id="Hull_root_plate"]
+points = PackedVector3Array(-2.28, 0.1, -0.72, -2.28, 0.08, 0.73, -1.52, 0, 0.77, -1.43, 0, -0.77, -2.15, 0.6, -1.17, -2.21, 0.61, 1.17, -1.62, 0.63, 1.13, -1.48, 0.62, -1.1, -2.05, 1.32, -0.52, -2.18, 1.35, 0.46, -1.63, 1.32, 0.51, -1.61, 1.28, -0.6)
+
+[node name="FallenTree" type="StaticBody3D"]
+metadata/tree_clearance_radius = 3.1
+
+[node name="Model" parent="." instance=ExtResource("1_pine")]
+
+[node name="Trunk" type="CollisionShape3D" parent="."]
+position = Vector3(0.13, 0.33, 0)
+rotation = Vector3(0, 0, 1.627)
+shape = SubResource("Capsule_trunk")
+
+[node name="RootPlate" type="CollisionShape3D" parent="."]
+shape = SubResource("Hull_root_plate")

@@ -148,7 +148,7 @@ public partial class EscapeObjective : Node
 		if (Repaired)
 			return player.State == SurvivorState.InCar ? "" : "Get to the car";
 		if (CarrierId == 0)
-			return "Find the jump starter at the forester’s hut";
+			return "Find the jump starter at the forester's hut";
 		return CarrierId == player.PeerId ? "Bring the jump starter to the car" : "Meet the carrier at the car";
 	}
 

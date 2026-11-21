@@ -14,8 +14,8 @@ public partial class OpeningCutscene : Node3D
 	private const float HandoffTime = 50f;
 	private const float RevealTime = 1.1f;
 	private static readonly string[] Trails = { "HillTrail", "HutTrail", "BridgeTrail" };
-	private static readonly string[] OfflineCast = { "Ty", "Pasażer z przodu", "Pasażer z tyłu" };
-	private static readonly float[] DepartureDistances = { 26f, 23f, 26f };
+	private static readonly string[] OfflineCast = { "You", "Front passenger", "Back seat passenger" };
+	private readonly float[] departureDistances = new float[3];
 	private const float DriverStep = 9.82f;
 	private const float PassengerStep = 10.82f;
 	private const float RearPassengerStep = 11.78f;
@@ -90,7 +90,7 @@ public partial class OpeningCutscene : Node3D
 	private float releasedAt = -1f;
 	private bool playing;
 
-	internal void Prepare(World activeWorld, Func<Vector3, Vector3> ground)
+	internal void Prepare(World activeWorld, ulong worldSeed, Func<Vector3, Vector3> ground)
 	{
 		world = activeWorld;
 		camera = GetNode<Camera3D>("Camera");
@@ -118,6 +118,7 @@ public partial class OpeningCutscene : Node3D
 		sign = world.GetNode<Node3D>("MapProps/RoadsideSign");
 		bridgeLamp = world.GetNode<OmniLight3D>("MapProps/WoodenBridge/Lamp").GlobalPosition;
 		parked = worldCar.GlobalTransform;
+		var random = new RandomNumberGenerator { Seed = worldSeed ^ 0x57A47UL };
 		for (int i = 0; i < routes.Length; i++)
 		{
 			Vector3 offset = i switch
@@ -128,7 +129,8 @@ public partial class OpeningCutscene : Node3D
 			};
 			roadsideMarks[i] = ground(parked.Origin + offset);
 			var trail = world.GetNode<Path3D>($"TrailRoutes/{Trails[i]}");
-			routes[i] = GroundRoute(trail, roadsideMarks[i], ground);
+			departureDistances[i] = random.RandfRange(22f, 40f);
+			routes[i] = GroundRoute(trail, roadsideMarks[i], random.RandfRange(-9f, 9f), ground);
 		}
 	}
 
@@ -138,7 +140,7 @@ public partial class OpeningCutscene : Node3D
 			GetViewport().SizeChanged -= FitText;
 	}
 
-	private static Curve3D GroundRoute(Path3D trail, Vector3 roadsideMark, Func<Vector3, Vector3> ground)
+	private static Curve3D GroundRoute(Path3D trail, Vector3 roadsideMark, float lateralOffset, Func<Vector3, Vector3> ground)
 	{
 		var route = new Curve3D();
 		Vector3 entry = trail.ToGlobal(trail.Curve.SampleBaked(0f));
@@ -146,28 +148,20 @@ public partial class OpeningCutscene : Node3D
 		for (int i = 0; i < approachSteps; i++)
 			route.AddPoint(ground(roadsideMark.Lerp(entry, (float)i / approachSteps)));
 		for (float distance = 0f; distance <= 42f; distance += 0.65f)
-			route.AddPoint(ground(trail.ToGlobal(trail.Curve.SampleBaked(distance))));
+		{
+			Vector3 point = trail.ToGlobal(trail.Curve.SampleBaked(distance));
+			Vector3 ahead = trail.ToGlobal(trail.Curve.SampleBaked(distance + 0.3f));
+			Vector3 side = (ahead - point).Cross(Vector3.Up).Normalized();
+			route.AddPoint(ground(point + side * lateralOffset * Mathf.SmoothStep(0f, 10f, distance)));
+		}
 		return route;
 	}
 
-	internal Transform3D GetStart(int slot)
-	{
-		Vector3 point = TrailPoint(slot, DepartureDistances[slot]);
-		Vector3 along = TrailPoint(slot, DepartureDistances[slot] + 0.45f) - point;
-		along.Y = 0f;
-		return new Transform3D(Basis.LookingAt(along), point + Vector3.Up * 0.045f);
-	}
-
-	internal void Stage(Player player, string[] matchNames)
+	internal void Stage(Player player, int slot, string[] matchNames)
 	{
 		names = matchNames.Length == 0 ? OfflineCast : matchNames;
-		for (int i = 0; i < routes.Length; i++)
-		{
-			if (GetStart(i).Origin.IsEqualApprox(player.GlobalPosition))
-				localSlot = i;
-		}
-
-		localStart = GetStart(localSlot);
+		localSlot = slot;
+		localStart = player.GlobalTransform;
 		worldCar.Hide();
 		moon.Show();
 		BuildScene();
@@ -313,8 +307,8 @@ public partial class OpeningCutscene : Node3D
 		AddPhoneText("23:59", 0.053f, 25, new Color("b4c9c7"));
 		string contact = names[localSlot == 0 ? 1 : 0];
 		AddPhoneText(contact, 0.018f, Mathf.Min(42, 224 / contact.Length), new Color("edf4e9"));
-		phoneAction = AddPhoneText("Połącz", -0.020f, 30, new Color("c3dec8"));
-		phoneStatus = AddPhoneText("Brak zasięgu", -0.027f, 32, new Color("ffd6b8"));
+		phoneAction = AddPhoneText("Call", -0.020f, 30, new Color("c3dec8"));
+		phoneStatus = AddPhoneText("No signal", -0.027f, 32, new Color("ffd6b8"));
 		var phoneLight = new OmniLight3D { Position = new Vector3(0.04f, 0.07f, 0.16f), LightColor = new Color("b0d4ec"),
 			LightEnergy = 0.45f, OmniRange = 0.4f };
 		phone.AddChild(phoneLight);
@@ -483,7 +477,7 @@ public partial class OpeningCutscene : Node3D
 			float lower = Ease(Progress(t, 45.3f, TitleTime + 0.45f));
 			phone.Position = new Vector3(Mathf.Lerp(0.17f, 0.047f, raise), -0.25f + (raise - lower) * 0.172f, -0.262f);
 			phone.Rotation = new Vector3(-0.10f + Mathf.Sin(t * 2.1f) * 0.025f, -0.09f, 0.14f - raise * 0.09f);
-			phoneAction.Text = t < 41.7f ? "Połącz" : t < CallFailureTime ? "Łączenie…" : "";
+			phoneAction.Text = t < 41.7f ? "Call" : t < CallFailureTime ? "Calling..." : "";
 			phoneStatus.Visible = t >= CallFailureTime;
 		}
 		if (shot != lastShot)
@@ -574,7 +568,7 @@ public partial class OpeningCutscene : Node3D
 
 			actor.Torch.Visible = t >= 22.9f;
 			float leave = Progress(t, 25.85f + slot * 0.13f, 35.5f);
-			float distance = DepartureDistances[slot] * leave;
+			float distance = departureDistances[slot] * leave;
 			float settledAt = slot == 1 ? 13.65f : 12.94f;
 			bool exiting = t < settledAt;
 			Vector3 mark = exiting ? ExitPosition(slot, t, settledAt) : TrailPoint(slot, distance);
@@ -632,20 +626,21 @@ public partial class OpeningCutscene : Node3D
 
 	private void UpdateOverlay(float t)
 	{
-		int bridgeSpeaker = names.Length == 3 ? 2 : 1;
 		string line = t switch
 		{
-			>= 4.55f and < 6.05f => $"{names[1]}: Co to było?",
+			>= 4.55f and < 6.05f => $"{names[1]}: What was that?",
 			>= 8.03f and < 9.65f => names.Length == 2
-				? $"{names[0]}: Nie odpala. Wysiadamy."
-				: $"{names[0]}: Nie odpala. Wysiadajcie.",
-			>= 13.05f and < 15.92f => $"{names[1]}: Jest drogowskaz. Sprawdzę leśniczówkę.",
-			>= 16.30f and < 19.52f => $"{names[bridgeSpeaker]}: Przy mostku pali się światło. Może ktoś tam jest.",
-			>= 19.78f and < 22.87f => $"{names[0]}: Wejdę wyżej. Może stamtąd uda się zadzwonić.",
-			>= 23.38f and < 26.1f => $"{names[1]}: Jak nic nie znajdziemy, wracamy do auta.",
+				? $"{names[0]}: It won't start. Come on."
+				: $"{names[0]}: It's dead. Everybody out.",
+			>= 13.05f and < 15.92f => $"{names[1]}: There's a hut up that way. I'll check it out.",
+			>= 16.30f and < 19.52f => names.Length == 3
+				? $"{names[2]}: See that light by the bridge? I'll check it out."
+				: $"{names[0]}: Look, there's a light by the bridge.",
+			>= 19.78f and < 22.87f => $"{names[0]}: No bars. I'll try up the hill.",
+			>= 23.38f and < 26.1f => $"{names[1]}: If you don't find anyone, meet back here.",
 			>= 36.75f and < 39.0f => names.Length == 2
-				? $"— {names[1 - localSlot]}?"
-				: $"— {names[(localSlot + 1) % 3]}? {names[(localSlot + 2) % 3]}?",
+				? $"{names[1 - localSlot]}? You there?"
+				: $"{names[(localSlot + 1) % 3]}? {names[(localSlot + 2) % 3]}?",
 			_ => ""
 		};
 		caption.Text = line;

@@ -90,15 +90,17 @@ target_position = Vector3(0, 0, -2.4)
 [node name="Flashlight" type="SpotLight3D" parent="Head" unique_id=423311576]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.015)
 light_energy = 2.0
+light_color = Color(1, 0.96, 0.88, 1)
 light_volumetric_fog_energy = 5.0
-spot_range = 15.0
+spot_range = 18.5
 spot_angle = 31.44
 spot_angle_attenuation = 1.65
 
 [node name="OmniLight3D" type="OmniLight3D" parent="Head" unique_id=770303488]
-light_energy = 0.5
+light_color = Color(0.81, 0.9, 1, 1)
+light_energy = 0.57
 light_specular = 0.15
-omni_range = 4.0
+omni_range = 5.2
 omni_attenuation = 0.35
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=321470950]
@@ -164,7 +166,7 @@ theme_override_styles/panel = SubResource("Style_slot")
 [node name="Name" type="Label" parent="HUD/Hotbar/Flashlight" unique_id=1883101692]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "2   Flashlight  ·  V"
+text = "2   Flashlight (V)"
 
 [node name="MenuHint" type="Label" parent="HUD" unique_id=1081224510]
 anchors_preset = 3

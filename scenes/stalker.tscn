@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/Stalker.cs" id="1_script"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="2_mimic"]
 [ext_resource type="AudioStream" path="res://assets/sounds/whistle.mp3" id="3_whistle"]
+[ext_resource type="AudioStream" path="res://assets/audio/intro/footstep.wav" id="4_step"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.34
@@ -27,3 +28,12 @@ unit_size = 15.0
 max_db = -4.0
 pitch_scale = 0.94
 panning_strength = 1.4
+
+[node name="Footstep" type="AudioStreamPlayer3D" parent="."]
+position = Vector3(0, 0.2, 0)
+stream = ExtResource("4_step")
+volume_db = -8.0
+unit_size = 5.0
+max_db = -5.0
+max_distance = 20.0
+max_polyphony = 2
