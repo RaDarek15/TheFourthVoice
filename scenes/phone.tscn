@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/3d-models/phone.glb" id="1_phone"]
+
+[sub_resource type="StandardMaterial3D" id="Material_screen"]
+shading_mode = 0
+albedo_color = Color(0.021, 0.041, 0.041, 1)
+
+[sub_resource type="QuadMesh" id="Mesh_screen"]
+material = SubResource("Material_screen")
+size = Vector2(0.0634, 0.1356)
+
+[sub_resource type="StandardMaterial3D" id="Material_bars"]
+shading_mode = 0
+albedo_color = Color(0.34, 0.46, 0.44, 1)
+
+[sub_resource type="QuadMesh" id="Mesh_bar"]
+material = SubResource("Material_bars")
+size = Vector2(0.003, 0.004)
+
+[sub_resource type="SystemFont" id="Font_display"]
+font_names = PackedStringArray("Consolas", "DejaVu Sans Mono", "Liberation Mono")
+font_weight = 700
+
+[node name="Phone" instance=ExtResource("1_phone")]
+
+[node name="SignalDisplay" type="Node3D" parent="."]
+position = Vector3(0, -0.00035, 0.0045)
+
+[node name="DisplayPanel" type="MeshInstance3D" parent="SignalDisplay"]
+cast_shadow = 0
+mesh = SubResource("Mesh_screen")
+
+[node name="ShortBar" type="MeshInstance3D" parent="SignalDisplay"]
+position = Vector3(-0.012, 0.02, 0.0002)
+cast_shadow = 0
+mesh = SubResource("Mesh_bar")
+
+[node name="MiddleBar" type="MeshInstance3D" parent="SignalDisplay"]
+position = Vector3(-0.0073, 0.0215, 0.0002)
+scale = Vector3(1, 1.75, 1)
+cast_shadow = 0
+mesh = SubResource("Mesh_bar")
+
+[node name="TallBar" type="MeshInstance3D" parent="SignalDisplay"]
+position = Vector3(-0.0026, 0.023, 0.0002)
+scale = Vector3(1, 2.5, 1)
+cast_shadow = 0
+mesh = SubResource("Mesh_bar")
+
+[node name="Disconnected" type="Label3D" parent="SignalDisplay"]
+position = Vector3(0.008, 0.023, 0.0002)
+pixel_size = 0.00011
+modulate = Color(1, 0.72, 0.38, 1)
+double_sided = false
+text = "×"
+font = SubResource("Font_display")
+font_size = 112
+outline_size = 0
+
+[node name="Status" type="Label3D" parent="SignalDisplay"]
+position = Vector3(0, 0.003, 0.0002)
+pixel_size = 0.000086
+modulate = Color(0.9, 0.95, 0.9, 1)
+double_sided = false
+text = "NO SIGNAL"
+font = SubResource("Font_display")
+font_size = 107
+outline_size = 0
