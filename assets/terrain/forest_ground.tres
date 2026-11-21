@@ -1,0 +1,26 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/terrain/forest_ground.gdshader" id="shader"]
+[ext_resource type="Texture2D" path="res://assets/terrain/surface_weights.png" id="surface_weights"]
+[ext_resource type="Texture2D" path="res://assets/terrain/forest_leaves_04_diff_2k.jpg" id="litter_color"]
+[ext_resource type="Texture2D" path="res://assets/terrain/forest_leaves_04_nor_gl_2k.jpg" id="litter_normal"]
+[ext_resource type="Texture2D" path="res://assets/terrain/forest_leaves_04_arm_1k.jpg" id="litter_arm"]
+[ext_resource type="Texture2D" path="res://assets/terrain/forest_floor_diff_2k.jpg" id="earth_color"]
+[ext_resource type="Texture2D" path="res://assets/terrain/forest_floor_nor_gl_2k.jpg" id="earth_normal"]
+[ext_resource type="Texture2D" path="res://assets/terrain/forest_floor_arm_1k.jpg" id="earth_arm"]
+[ext_resource type="Texture2D" path="res://assets/terrain/asphalt_04_diff_2k.jpg" id="asphalt_color"]
+[ext_resource type="Texture2D" path="res://assets/terrain/asphalt_04_nor_gl_2k.jpg" id="asphalt_normal"]
+[ext_resource type="Texture2D" path="res://assets/terrain/asphalt_04_arm_1k.jpg" id="asphalt_arm"]
+
+[resource]
+shader = ExtResource("shader")
+shader_parameter/surface_weights = ExtResource("surface_weights")
+shader_parameter/litter_color = ExtResource("litter_color")
+shader_parameter/litter_normal = ExtResource("litter_normal")
+shader_parameter/litter_arm = ExtResource("litter_arm")
+shader_parameter/earth_color = ExtResource("earth_color")
+shader_parameter/earth_normal = ExtResource("earth_normal")
+shader_parameter/earth_arm = ExtResource("earth_arm")
+shader_parameter/asphalt_color = ExtResource("asphalt_color")
+shader_parameter/asphalt_normal = ExtResource("asphalt_normal")
+shader_parameter/asphalt_arm = ExtResource("asphalt_arm")

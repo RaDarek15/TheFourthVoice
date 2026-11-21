@@ -1,25 +1,28 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://caqu5v7f10xyd"]
 
-[ext_resource type="Script" path="res://scripts/Stalker.cs" id="1_script"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="2_mimic"]
-[ext_resource type="AudioStream" path="res://assets/sounds/whistle.mp3" id="3_whistle"]
+[ext_resource type="Script" uid="uid://d1fxysshwcun4" path="res://scripts/Stalker.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bqsm7icyx3v0c" path="res://assets/3d-models/mimic.glb" id="2_mimic"]
+[ext_resource type="AudioStream" uid="uid://pw4k4hwhrexr" path="res://assets/sounds/whistle.mp3" id="3_whistle"]
+[ext_resource type="AudioStream" uid="uid://bh88yhsnvfcae" path="res://assets/audio/intro/footstep.wav" id="4_step"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.34
 height = 2.1
 
-[node name="Stalker" type="CharacterBody3D"]
-floor_snap_length = 0.45
+[node name="Stalker" type="CharacterBody3D" unique_id=1682228872]
 floor_constant_speed = true
+floor_snap_length = 0.45
 script = ExtResource("1_script")
+WalkSpeed = 8.0
+RunSpeed = 12.0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-position = Vector3(0, 1.05, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2046940277]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="Model" parent="." instance=ExtResource("2_mimic")]
+[node name="Model" parent="." unique_id=650825043 instance=ExtResource("2_mimic")]
 
-[node name="LureWhistle" type="AudioStreamPlayer3D" parent="."]
+[node name="LureWhistle" type="AudioStreamPlayer3D" parent="." unique_id=486300833]
 top_level = true
 stream = ExtResource("3_whistle")
 volume_db = -5.0
@@ -27,3 +30,12 @@ unit_size = 15.0
 max_db = -4.0
 pitch_scale = 0.94
 panning_strength = 1.4
+
+[node name="Footstep" type="AudioStreamPlayer3D" parent="." unique_id=2101798870]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+stream = ExtResource("4_step")
+volume_db = -8.0
+unit_size = 5.0
+max_db = -5.0
+max_distance = 20.0
+max_polyphony = 2

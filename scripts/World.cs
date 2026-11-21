@@ -11,6 +11,7 @@ public partial class World : Node3D
 	[Export] public Node3D Terrain;
 	[Export] public PackedScene TrailStoneModel;
 	[Export] public PackedScene ForestStoneModel;
+	[Export] public PackedScene FallenTreeScene;
 	[Export] public PackedScene[] FoliageModels = System.Array.Empty<PackedScene>();
 	[Export] public PackedScene BoundaryBushModel;
 
@@ -57,7 +58,8 @@ public partial class World : Node3D
 	private readonly Dictionary<int, Player> players = new();
 	private NetworkManager network;
 	private OpeningCutscene intro;
-	private Transform3D[] openingStarts;
+	private Transform3D[] playerStarts;
+	private Rect2? playableArea;
 	private bool introPlaying;
 	private float updateTimer;
 
@@ -91,10 +93,9 @@ public partial class World : Node3D
 		}
 
 		List<PlantingTile> forestFloor = GetPlantingTiles(forestOnly: true);
-		GenerateTrees(forestFloor);
-		GenerateGroundCover(forestFloor);
-		List<PlantingTile> ground = GetPlantingTiles(forestOnly: false, includeRoad: true);
-		AddBoundary(ground);
+		var roadBounds = new List<Rect2>();
+		List<PlantingTile> ground = GetPlantingTiles(forestOnly: false, includeRoad: true, roadBounds: roadBounds);
+		List<Path3D> routes = GetTrailRoutes();
 		Escape = new EscapeObjective { Name = "EscapeObjective" };
 		AddChild(Escape);
 		GameplayStarted = IntroScene == null;
@@ -102,24 +103,26 @@ public partial class World : Node3D
 		{
 			intro = IntroScene.Instantiate<OpeningCutscene>();
 			AddChild(intro);
-			intro.Prepare(this, point =>
+			intro.Prepare(this, network.IsOnline ? (ulong)network.WorldSeed : GD.Randi(), point =>
 			{
 				Vector3 local = ToLocal(point);
 				TryGetPlantingPosition(ground, ref local);
 				return ToGlobal(local);
 			});
-			openingStarts = new Transform3D[NetworkManager.MaxPlayers];
-			for (int slot = 0; slot < openingStarts.Length; slot++)
-				openingStarts[slot] = intro.GetStart(slot);
 			introPlaying = true;
 			if (!network.IsOnline || Multiplayer.IsServer())
 				Enemy?.SetPhysicsProcess(false);
 		}
+		AddBoundary(ground);
+		playerStarts = ChoosePlayerStarts(ground);
+		PlaceFallenTrees(forestFloor, routes, roadBounds);
+		GenerateTrees(forestFloor);
+		GenerateGroundCover(forestFloor, routes);
 		if (network.IsOnline)
 			network.RegisterWorld(this);
 		else
 		{
-			SpawnPlayer(NetworkManager.HostId, StartPosition(0), true, network.LocalNickname);
+			SpawnPlayer(NetworkManager.HostId, 0, true, network.LocalNickname);
 			StartOpening();
 		}
 		UpdateVisibleTrees();
@@ -131,24 +134,13 @@ public partial class World : Node3D
 			network.UnregisterWorld(this);
 	}
 
-	public Player SpawnPlayer(int id, Vector3 position, bool isLocal, string nickname)
+	public Player SpawnPlayer(int id, int slot, bool isLocal, string nickname)
 	{
 		var player = PlayerScene.Instantiate<Player>();
 		bool online = network.IsOnline;
 		Node3D parent = online ? GetNode<Node3D>("Players") : this;
 		player.Name = online ? $"Player_{id}" : "Player";
-		player.Position = parent.ToLocal(position);
-		if (openingStarts != null)
-		{
-			foreach (Transform3D start in openingStarts)
-			{
-				if (start.Origin.IsEqualApprox(position))
-				{
-					player.Basis = parent.GlobalBasis.Inverse() * start.Basis;
-					break;
-				}
-			}
-		}
+		player.Transform = parent.GlobalTransform.AffineInverse() * playerStarts[slot];
 		player.ConfigurePeer(id, isLocal, online, nickname);
 		players.Add(id, player);
 		parent.AddChild(player);
@@ -159,7 +151,7 @@ public partial class World : Node3D
 			if (introPlaying)
 			{
 				player.SetOpeningLocked(true);
-				intro.Stage(player, network.MatchNames);
+				intro.Stage(player, slot, network.MatchNames);
 			}
 		}
 		return player;
@@ -171,13 +163,38 @@ public partial class World : Node3D
 			intro.Begin(startTick);
 	}
 
-	public Vector3 StartPosition(int slot)
+	private Transform3D[] ChoosePlayerStarts(List<PlantingTile> ground)
 	{
-		if (openingStarts != null)
-			return openingStarts[slot].Origin;
+		var starts = new Transform3D[network.IsOnline ? network.GroupSize : 1];
+		var random = new RandomNumberGenerator();
+		if (network.IsOnline)
+			random.Seed = (ulong)network.WorldSeed ^ 0x504C4159UL;
 
-		float side = slot == 0 ? 0f : slot == 1 ? 1f : -1f;
-		return SpawnPosition + Vector3.Right * (NetworkManager.SpawnSpacing * side);
+		var occupied = new Dictionary<Vector2I, List<TreeFootprint>>();
+		float radius = Mathf.Max(SpawnClearance, ReserveMapPropFootprints(occupied));
+		for (int slot = 0; slot < starts.Length; slot++)
+		{
+			Vector3 local = ToLocal(SpawnPosition) + Vector3.Right * (slot * NetworkManager.SpawnSpacing);
+			if (playableArea is Rect2 area)
+			{
+				bool found = false;
+				for (int attempt = 0; attempt < 256 && !found; attempt++)
+				{
+					Vector3 point = new(random.RandfRange(area.Position.X, area.End.X), 0f,
+						random.RandfRange(area.Position.Y, area.End.Y));
+					var footprint = new TreeFootprint(point, SpawnClearance);
+					if (TryGetPlantingPosition(ground, ref point) && TryReserveFootprint(occupied, footprint, radius))
+					{
+						local = point + Vector3.Up * 0.05f;
+						found = true;
+					}
+				}
+				if (!found)
+					GD.PushWarning($"Using the fallback player spawn for slot {slot}.");
+			}
+			starts[slot] = new Transform3D(new Basis(Vector3.Up, random.RandfRange(0f, Mathf.Tau)), ToGlobal(local));
+		}
+		return starts;
 	}
 
 	internal void ReleaseOpeningCamera()
@@ -187,6 +204,13 @@ public partial class World : Node3D
 			player.Show();
 		LocalPlayer.GetNode<Camera3D>("Head/Camera3D").MakeCurrent();
 		UpdateVisibleTrees();
+	}
+
+	internal Vector3 RandomSpawnCandidate()
+	{
+		Rect2 area = playableArea ?? new Rect2(-ForestSize / 2, -ForestSize / 2, ForestSize, ForestSize);
+		return ToGlobal(new Vector3((float)GD.RandRange(area.Position.X, area.End.X), 0f,
+			(float)GD.RandRange(area.Position.Y, area.End.Y)));
 	}
 
 	internal void FinishOpening()
@@ -223,6 +247,8 @@ public partial class World : Node3D
 		var batches = new Dictionary<(Mesh Mesh, Vector2I Cell), List<Transform3D>>();
 		var random = new RandomNumberGenerator { Seed = 7218 };
 		const float inset = 1.3f;
+		playableArea = new Rect2(bounds.Position.X, bounds.Position.Z, bounds.Size.X, bounds.Size.Z)
+			.Grow(-(inset + 1f));
 		for (int side = 0; side < 4; side++)
 		{
 			bool alongX = side < 2;
@@ -305,6 +331,108 @@ public partial class World : Node3D
 		return mesh.GetSurfaceCount() > 0 ? mesh : null;
 	}
 
+	private List<Path3D> GetTrailRoutes()
+	{
+		var routes = new List<Path3D>();
+		if (GetNodeOrNull<Node3D>("TrailRoutes") is Node3D trailRoutes)
+		{
+			foreach (Node child in trailRoutes.GetChildren())
+			{
+				if (child is Path3D route && route.Curve?.PointCount > 1)
+					routes.Add(route);
+			}
+		}
+		return routes;
+	}
+
+	private void PlaceFallenTrees(List<PlantingTile> forestFloor, List<Path3D> routes, List<Rect2> roadBounds)
+	{
+		var mapProps = GetNodeOrNull<Node3D>("MapProps");
+		if (FallenTreeScene == null || forestFloor.Count == 0 || mapProps == null)
+			return;
+
+		var random = new RandomNumberGenerator();
+		if (network.IsOnline)
+			random.Seed = (ulong)network.WorldSeed ^ 0xFA11E17UL;
+
+		var occupied = new Dictionary<Vector2I, List<TreeFootprint>>();
+		float maxRadius = ReserveMapPropFootprints(occupied);
+		Vector3 spawn = ToLocal(SpawnPosition);
+		ReserveFootprint(occupied, new TreeFootprint(new Vector3(spawn.X, 0, spawn.Z), PlayerSpawnClearance));
+		if (mapProps.GetNodeOrNull<Node3D>("ForesterHut") is Node3D hut)
+		{
+			Vector3 center = ToLocal(hut.GlobalPosition);
+			ReserveFootprint(occupied, new TreeFootprint(new Vector3(center.X, 0, center.Z), 15f));
+		}
+
+		const float separation = 28f;
+		maxRadius = Mathf.Max(maxRadius, separation);
+		int count = random.RandiRange(2, 3);
+		for (int i = 0; i < count; i++)
+		{
+			var log = FallenTreeScene.Instantiate<StaticBody3D>();
+			float radius = log.GetMeta(TreeClearanceMetadata).AsSingle();
+			float limit = ForestSize / 2f - radius - 3f;
+			bool placed = false;
+			for (int attempt = 0; attempt < 256 && limit > 0f; attempt++)
+			{
+				Vector3 center = new(random.RandfRange(-limit, limit), 0, random.RandfRange(-limit, limit));
+				var centerXZ = new Vector2(center.X, center.Z);
+				if (roadBounds.Exists(bounds => bounds.Grow(radius + 0.5f).HasPoint(centerXZ))
+					|| IsNearTrail(routes, center, radius + TrailEdgeOffset + 1f))
+					continue;
+
+				Basis heading = new(Vector3.Up, random.RandfRange(0f, Mathf.Tau));
+				if (!TrySeatFallenTree(forestFloor, center, heading, radius, out Transform3D pose))
+					continue;
+				if (!TryReserveFootprint(occupied, new TreeFootprint(center, radius), maxRadius))
+					continue;
+
+				ReserveFootprint(occupied, new TreeFootprint(center, separation));
+				log.Name = $"FallenTree{i + 1}";
+				mapProps.AddChild(log);
+				log.GlobalTransform = GlobalTransform * pose;
+				placed = true;
+				break;
+			}
+			if (!placed)
+				log.Free();
+		}
+	}
+
+	private static bool TrySeatFallenTree(List<PlantingTile> forestFloor, Vector3 center, Basis heading,
+		float radius, out Transform3D pose)
+	{
+		pose = Transform3D.Identity;
+		if (!TryGetPlantingPosition(forestFloor, ref center))
+			return false;
+
+		// Sample beyond the model on all sides to keep the root plate and splinters on forest soil.
+		Vector3 root = center - heading.X * radius;
+		Vector3 tip = center + heading.X * radius;
+		if (!TryGetPlantingPosition(forestFloor, ref root) || !TryGetPlantingPosition(forestFloor, ref tip))
+			return false;
+
+		float slope = (tip.Y - root.Y) / (2f * radius);
+		float midpoint = (tip.Y + root.Y) * 0.5f;
+		if (Mathf.Abs(slope) > 0.24f || Mathf.Abs(center.Y - midpoint) > 0.12f)
+			return false;
+		for (int along = -1; along <= 1; along++)
+		{
+			for (int side = -1; side <= 1; side += 2)
+			{
+				Vector3 sample = center + heading.X * (along * radius) + heading.Z * (side * 1.6f);
+				if (!TryGetPlantingPosition(forestFloor, ref sample)
+					|| Mathf.Abs(sample.Y - (midpoint + along * radius * slope)) > 0.14f)
+					return false;
+			}
+		}
+
+		center.Y = midpoint - 0.035f;
+		pose = new Transform3D(heading * new Basis(Vector3.Back, Mathf.Atan(slope)), center);
+		return true;
+	}
+
 	private void GenerateTrees(List<PlantingTile> plantingTiles)
 	{
 		var random = new RandomNumberGenerator();
@@ -369,7 +497,7 @@ public partial class World : Node3D
 		}
 	}
 
-	private void GenerateGroundCover(List<PlantingTile> forestFloor)
+	private void GenerateGroundCover(List<PlantingTile> forestFloor, List<Path3D> routes)
 	{
 		if (Terrain == null || ForestSize <= 0f)
 			return;
@@ -385,16 +513,6 @@ public partial class World : Node3D
 			Vector3 center = tree.Position;
 			center.Y = 0f;
 			ReserveFootprint(occupiedCells, new TreeFootprint(center, 1.3f));
-		}
-
-		var routes = new List<Path3D>();
-		if (GetNodeOrNull<Node3D>("TrailRoutes") is Node3D trailRoutes)
-		{
-			foreach (Node child in trailRoutes.GetChildren())
-			{
-				if (child is Path3D route && route.Curve?.PointCount > 1)
-					routes.Add(route);
-			}
 		}
 
 		var batches = new Dictionary<(Mesh Mesh, Vector2I Cell), List<Transform3D>>();
@@ -584,6 +702,16 @@ public partial class World : Node3D
 			return 0f;
 
 		float maxRadius = 0f;
+		if (playerStarts != null)
+		{
+			foreach (Transform3D start in playerStarts)
+			{
+				Vector3 center = ToLocal(start.Origin);
+				center.Y = 0f;
+				ReserveFootprint(occupiedCells, new TreeFootprint(center, SpawnClearance));
+			}
+			maxRadius = SpawnClearance;
+		}
 		foreach (Node child in mapProps.GetChildren())
 		{
 			if (child is not Node3D prop)
@@ -612,7 +740,7 @@ public partial class World : Node3D
 		footprints.Add(footprint);
 	}
 
-	private List<PlantingTile> GetPlantingTiles(bool forestOnly, bool includeRoad = false)
+	private List<PlantingTile> GetPlantingTiles(bool forestOnly, bool includeRoad = false, List<Rect2> roadBounds = null)
 	{
 		var tiles = new List<PlantingTile>();
 		if (Terrain == null)
@@ -634,6 +762,7 @@ public partial class World : Node3D
 				if (forestOnly ? material != "M_ForestLitter" : !includeRoad && material == "M_DarkAsphalt")
 					continue;
 
+				int firstFace = faces.Count;
 				var arrays = mesh.SurfaceGetArrays(surface);
 				Vector3[] vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
 				int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
@@ -646,6 +775,17 @@ public partial class World : Node3D
 				{
 					foreach (int index in indices)
 						faces.Add(localTransform * vertices[index]);
+				}
+
+				if (roadBounds != null && material == "M_DarkAsphalt")
+				{
+					for (int i = firstFace; i < faces.Count; i += 3)
+					{
+						Vector2 a = new(faces[i].X, faces[i].Z);
+						Vector2 b = new(faces[i + 1].X, faces[i + 1].Z);
+						Vector2 c = new(faces[i + 2].X, faces[i + 2].Z);
+						roadBounds.Add(new Rect2(a, Vector2.Zero).Expand(b).Expand(c));
+					}
 				}
 			}
 

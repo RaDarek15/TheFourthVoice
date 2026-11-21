@@ -2,6 +2,11 @@ using Godot;
 
 public partial class Player : CharacterBody3D
 {
+	private const float MaxStamina = 5f;
+	private const float StaminaRecoveryRate = 1f;
+	private const float StaminaRecoveryDelay = 1f;
+	private const float StaminaToResumeSprint = 1.5f;
+
 	[Export] public float Speed = 5f;
 	[Export] public float MouseSensitivity = 0.002f;
 
@@ -38,6 +43,9 @@ public partial class Player : CharacterBody3D
 	private bool flashlightPowered = true;
 	private bool holdingFlashlight;
 	private bool interactionRequested;
+	private float stamina = MaxStamina;
+	private float staminaRecoveryDelayRemaining;
+	private bool sprintExhausted;
 	private Vector3 targetPosition;
 	private float targetYaw;
 	private float targetPitch;
@@ -264,7 +272,7 @@ public partial class Player : CharacterBody3D
 			velocity += GetGravity() * (float)delta;
 
 		Vector3 direction = Transform.Basis * new Vector3(input.X, 0f, input.Y);
-		bool sprinting = Input.IsActionPressed("sprint");
+		bool sprinting = !sprintExhausted && input != Vector2.Zero && Input.IsActionPressed("sprint");
 		float speed = sprinting ? Speed * 1.5f : Speed;
 		velocity.X = direction.X * speed;
 		velocity.Z = direction.Z * speed;
@@ -276,6 +284,7 @@ public partial class Player : CharacterBody3D
 		travel.Y = 0f;
 		IsWalking = IsOnFloor() && travel.LengthSquared() >= 0.04f;
 		IsRunning = IsWalking && sprinting;
+		UpdateStamina((float)delta);
 		UpdateAnimation();
 		UpdateFootsteps();
 
@@ -301,10 +310,27 @@ public partial class Player : CharacterBody3D
 			escape.Interact(this, use);
 		}
 		if (escape?.RepairerId == PeerId && !gameMenu.Visible)
-			hint = $"Repairing · {Mathf.CeilToInt(EscapeObjective.RepairSeconds - escape.RepairTime)} s";
+			hint = $"Repairing ({Mathf.CeilToInt(EscapeObjective.RepairSeconds - escape.RepairTime)} s)";
 		interactionHint.Text = hint;
 		interactionHint.Visible = hint.Length != 0;
 		interactionRequested = false;
+	}
+
+	private void UpdateStamina(float delta)
+	{
+		if (IsRunning)
+		{
+			stamina = Mathf.Max(0f, stamina - delta);
+			staminaRecoveryDelayRemaining = StaminaRecoveryDelay;
+			sprintExhausted = stamina == 0f;
+			return;
+		}
+
+		float recoveryTime = Mathf.Max(0f, delta - staminaRecoveryDelayRemaining);
+		staminaRecoveryDelayRemaining = Mathf.Max(0f, staminaRecoveryDelayRemaining - delta);
+		stamina = Mathf.Min(MaxStamina, stamina + recoveryTime * StaminaRecoveryRate);
+		if (stamina >= StaminaToResumeSprint)
+			sprintExhausted = false;
 	}
 
 	private void StopRepair()

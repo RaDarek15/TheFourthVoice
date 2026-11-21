@@ -2,7 +2,7 @@ using Godot;
 
 public partial class TitleScreen : Control
 {
-	private const string DefaultHint = "Your flashlight can give you away.";
+	private const string DefaultHint = "Three went in. \nFour voices answered.​";
 
 	private Button startButton;
 	private Button hostButton;
@@ -68,8 +68,8 @@ public partial class TitleScreen : Control
 		if (!TryGetNickname("Player", out string name))
 			return;
 
-		ShowStatus("Loading the forest…", true);
-		startButton.Text = "Loading…";
+		ShowStatus("Loading the forest...", true);
+		startButton.Text = "Loading...";
 		SceneTree tree = GetTree();
 		await ToSignal(tree, SceneTree.SignalName.ProcessFrame);
 		await ToSignal(tree, SceneTree.SignalName.ProcessFrame);
@@ -108,7 +108,7 @@ public partial class TitleScreen : Control
 		Error result = network.JoinServer(address.Text, name);
 		if (result == Error.InvalidParameter)
 		{
-			ShowStatus("Enter the host PC’s IP address.", false);
+			ShowStatus("Enter the host PC's IP address.", false);
 			address.GrabFocus();
 		}
 		else if (result != Error.Ok)

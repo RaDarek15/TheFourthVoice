@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/3d-models/forest_terrain_200.glb" id="terrain"]
+[ext_resource type="Material" path="res://assets/terrain/forest_ground.tres" id="ground"]
+[ext_resource type="PackedScene" path="res://assets/terrain/forest_understory.scn" id="understory"]
+
+[node name="ForestTerrain" instance=ExtResource("terrain")]
+
+[node name="Terrain_01_01" parent="." index="6"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_01_02" parent="." index="7"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_01_03" parent="." index="8"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_01_04" parent="." index="9"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_02_01" parent="." index="10"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_02_02" parent="." index="11"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_02_03" parent="." index="12"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_02_04" parent="." index="13"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_03_01" parent="." index="14"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_03_02" parent="." index="15"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_03_03" parent="." index="16"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_03_04" parent="." index="17"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_04_01" parent="." index="18"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_04_02" parent="." index="19"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_04_03" parent="." index="20"]
+material_override = ExtResource("ground")
+
+[node name="Terrain_04_04" parent="." index="21"]
+material_override = ExtResource("ground")
+
+[node name="Understory" parent="." instance=ExtResource("understory")]

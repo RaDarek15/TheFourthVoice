@@ -70,7 +70,7 @@ public partial class NetworkManager : Node
 		if (IsOnline || !IsValidNickname(name))
 			return Error.InvalidParameter;
 		nickname = name.Trim();
-		MatchNames = new[] { nickname, "Pasażer z przodu", "Pasażer z tyłu" };
+		MatchNames = new[] { nickname, "Front passenger", "Back seat passenger" };
 		Error result = GetTree().ChangeSceneToFile(WorldScene);
 		if (result != Error.Ok)
 			CloseSession();
@@ -147,7 +147,7 @@ public partial class NetworkManager : Node
 		isHost = false;
 		joinTimeRemaining = JoinTimeout;
 		Multiplayer.MultiplayerPeer = peer;
-		SetMenuStatus($"Connecting to {address}…", true);
+		SetMenuStatus($"Connecting to {address}...", true);
 		return Error.Ok;
 	}
 
@@ -159,7 +159,7 @@ public partial class NetworkManager : Node
 		{
 			int id = matchPeers[slot];
 			playerSlots.Add(id, slot);
-			world.SpawnPlayer(id, world.StartPosition(slot), id == localId, MatchNames[slot]);
+			world.SpawnPlayer(id, slot, id == localId, MatchNames[slot]);
 		}
 		if (isHost)
 		{
@@ -369,11 +369,11 @@ public partial class NetworkManager : Node
 
 	private void ShowRoster(string[] names)
 	{
-		string status = $"LAN lobby · {names.Length}/{GroupSize}\n{string.Join("  ·  ", names)}";
+		string status = $"LAN lobby ({names.Length}/{GroupSize})\n{string.Join(", ", names)}";
 		if (names.Length < MinPlayers)
-			status += "\nWaiting for players…";
+			status += "\nWaiting for players...";
 		else if (!isHost)
-			status += "\nWaiting for the host to start…";
+			status += "\nWaiting for the host to start...";
 		SetMenuStatus(status, false);
 	}
 
@@ -381,7 +381,7 @@ public partial class NetworkManager : Node
 	{
 		launching = true;
 		launchDeadline = (long)Time.GetTicksMsec() + 30000;
-		SetMenuStatus("Loading the forest…", true);
+		SetMenuStatus("Loading the forest...", true);
 	}
 
 	private void LoadWorld()
