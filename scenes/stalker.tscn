@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Stalker.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="2_mimic"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.34
+height = 2.1
+
+[node name="Stalker" type="CharacterBody3D"]
+floor_snap_length = 0.45
+floor_constant_speed = true
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 1.05, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Model" parent="." instance=ExtResource("2_mimic")]
