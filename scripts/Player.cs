@@ -9,6 +9,8 @@ public partial class Player : CharacterBody3D
 	private SpotLight3D flashlight;
 	private Node3D head;
 
+	public bool IsFlashlightOn => flashlight != null && flashlight.IsVisibleInTree();
+
 	public override void _Ready()
 	{
 		head = GetNode<Node3D>("Head");
