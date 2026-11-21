@@ -289,6 +289,58 @@ public partial class NetworkManager : Node
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void SyncStalker(Vector3 position, float yaw, bool walking) => world?.Enemy?.ApplyPose(position, yaw, walking);
 
+	public void Whistle(Player player)
+	{
+		if (!player.TryStartWhistle())
+			return;
+
+		Vector3 origin = player.GlobalPosition;
+		player.PlayWhistle(origin);
+		if (!IsOnline || isHost)
+			ShareWhistle(player, origin);
+		else
+			RpcId(HostId, MethodName.RequestWhistle, origin);
+	}
+
+	private void ShareWhistle(Player player, Vector3 origin)
+	{
+		World activeWorld = IsOnline ? world : player.GetParent() as World;
+		Stalker stalker = activeWorld?.Enemy;
+		if (IsInstanceValid(stalker))
+			stalker.InvestigateWhistle(origin);
+
+		if (!isHost)
+			return;
+
+		foreach (int recipient in playerSlots.Keys)
+		{
+			if (recipient != HostId && recipient != player.PeerId)
+				RpcId(recipient, MethodName.HearWhistle, player.PeerId, origin);
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RequestWhistle(Vector3 origin)
+	{
+		int id = Multiplayer.GetRemoteSenderId();
+		if (!isHost || !playerSlots.ContainsKey(id) || !origin.IsFinite())
+			return;
+
+		Player player = world?.GetPlayer(id);
+		if (!IsInstanceValid(player) || !player.TryStartWhistle())
+			return;
+
+		// The reliable whistle can arrive ahead of the latest movement snapshot.
+		if (player.GlobalPosition.DistanceSquaredTo(origin) > 9f)
+			origin = player.GlobalPosition;
+
+		player.PlayWhistle(origin);
+		ShareWhistle(player, origin);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void HearWhistle(int id, Vector3 origin) => world?.GetPlayer(id)?.PlayWhistle(origin);
+
 	public void ToggleDoor(HutDoor door)
 	{
 		if (!IsOnline || isHost)

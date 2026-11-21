@@ -35,6 +35,12 @@ public partial class TitleScreen : Control
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 		startButton.GrabFocus();
 	}
+	public void showTitle()
+	{
+		FitTitle();
+		Input.MouseMode = Input.MouseModeEnum.Visible;
+		startButton.GrabFocus();
+	}
 
 	public override void _ExitTree()
 	{

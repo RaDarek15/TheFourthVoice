@@ -7,6 +7,8 @@ public partial class Stalker : CharacterBody3D
 	[Export] public float StandoffDistance = 6f;
 
 	private const float DetectionRange = 50f;
+	private const float WhistleAccuracy = 10f;
+	private const float InvestigationArrivalDistance = 1f;
 	private const int SpawnDirections = 16;
 	private const float TurnSpeed = 7f;
 	private static readonly float[] AvoidanceAngles = { 30f, 60f, 90f, 120f };
@@ -16,6 +18,8 @@ public partial class Stalker : CharacterBody3D
 	private bool remoteReplica;
 	private Vector3 remotePosition;
 	private float remoteYaw;
+	private Vector3? whistleTarget;
+	private float investigationTime;
 	private bool placed;
 	private int avoidanceSide = 1;
 
@@ -62,9 +66,9 @@ public partial class Stalker : CharacterBody3D
 
 		float step = (float)delta;
 		Vector3 direction = Vector3.Zero;
-		if (TryDetectPlayer(out Vector3 bearing, out float distance))
+		if (TryChooseTarget(step, out Vector3 bearing, out float distance, out float stopDistance))
 		{
-			if (distance > StandoffDistance)
+			if (distance > stopDistance)
 				direction = Steer(bearing);
 
 			Vector3 facing = direction.IsZeroApprox() ? bearing : direction;
@@ -80,6 +84,40 @@ public partial class Stalker : CharacterBody3D
 		Vector3 movement = GetRealVelocity();
 		IsWalking = IsOnFloor() && new Vector2(movement.X, movement.Z).LengthSquared() > 0.04f;
 		PlayAnimation(IsWalking ? "Walk" : "Idle");
+	}
+
+	public void InvestigateWhistle(Vector3 origin)
+	{
+		if (remoteReplica)
+			return;
+
+		float angle = GD.Randf() * Mathf.Tau;
+		float radius = Mathf.Sqrt(GD.Randf()) * WhistleAccuracy;
+		whistleTarget = origin + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+		var offset = whistleTarget.Value - GlobalPosition;
+		offset.Y = 0f;
+		investigationTime = Mathf.Max(DetectionRange, offset.Length()) / Mathf.Max(WalkSpeed, 0.1f) + 12f;
+	}
+
+	private bool TryChooseTarget(float delta, out Vector3 bearing, out float distance, out float stopDistance)
+	{
+		if (whistleTarget is Vector3 point)
+		{
+			Vector3 offset = point - GlobalPosition;
+			offset.Y = 0f;
+			distance = offset.Length();
+			investigationTime -= delta;
+			if (investigationTime > 0f && distance > InvestigationArrivalDistance)
+			{
+				bearing = offset / distance;
+				stopDistance = InvestigationArrivalDistance;
+				return true;
+			}
+			whistleTarget = null;
+		}
+
+		stopDistance = StandoffDistance;
+		return TryDetectPlayer(out bearing, out distance);
 	}
 
 	public void ApplyPose(Vector3 position, float yaw, bool walking)

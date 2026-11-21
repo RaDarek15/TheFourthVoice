@@ -5,6 +5,8 @@
 [ext_resource type="PackedScene" path="res://assets/3d-models/player.glb" id="2_player"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/phone.glb" id="3_phone"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/flashlight.glb" id="4_flashlight"]
+[ext_resource type="AudioStream" path="res://assets/sounds/playerWalk.mp3" id="5_footsteps"]
+[ext_resource type="AudioStream" path="res://assets/sounds/whistle.mp3" id="6_whistle"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_7i42y"]
 radius = 0.35
@@ -28,6 +30,22 @@ bg_color = Color(0.14, 0.16, 0.12, 0.94)
 border_width_bottom = 2
 border_color = Color(0.83, 0.84, 0.61, 1)
 
+[sub_resource type="StyleBoxFlat" id="Style_game_menu"]
+content_margin_left = 24.0
+content_margin_top = 22.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.045, 0.06, 0.05, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.33, 0.42, 0.35, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_left = 5
+corner_radius_bottom_right = 5
+
 [node name="Player" type="CharacterBody3D" unique_id=1126685206]
 collision_layer = 3
 script = ExtResource("1_3vyb7")
@@ -41,6 +59,22 @@ shape = SubResource("CapsuleShape3D_7i42y")
 
 [node name="Model" parent="." instance=ExtResource("2_player")]
 rotation = Vector3(0, 3.1415927, 0)
+
+[node name="Footsteps" type="AudioStreamPlayer3D" parent="."]
+position = Vector3(0, 0.1, 0)
+stream = ExtResource("5_footsteps")
+unit_size = 2.5
+volume_db = -9.0
+max_db = -7.0
+max_distance = 20.0
+
+[node name="Whistle" type="AudioStreamPlayer3D" parent="."]
+top_level = true
+stream = ExtResource("6_whistle")
+unit_size = 13.0
+volume_db = -4.0
+max_db = -4.0
+panning_strength = 1.4
 
 [node name="Head" type="Node3D" parent="." unique_id=80691671]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
@@ -124,3 +158,68 @@ theme_override_styles/panel = SubResource("Style_slot")
 [node name="Name" type="Label" parent="HUD/Hotbar/Flashlight"]
 theme_override_font_sizes/font_size = 14
 text = "2   Flashlight  ·  V"
+
+[node name="MenuHint" type="Label" parent="HUD"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -105.0
+offset_top = -46.0
+offset_right = -18.0
+offset_bottom = -18.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.83, 0.87, 0.79, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "Esc   Menu"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="GameMenu" type="ColorRect" parent="HUD"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.018, 0.025, 0.02, 0.73)
+
+[node name="Center" type="CenterContainer" parent="HUD/GameMenu"]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="HUD/GameMenu/Center"]
+custom_minimum_size = Vector2(252, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_game_menu")
+
+[node name="Actions" type="VBoxContainer" parent="HUD/GameMenu/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="HUD/GameMenu/Center/Panel/Actions"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.93, 0.85, 1)
+theme_override_font_sizes/font_size = 23
+text = "Game menu"
+
+[node name="Resume" type="Button" parent="HUD/GameMenu/Center/Panel/Actions"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../MainMenu")
+theme_override_styles/normal = SubResource("Style_slot")
+theme_override_styles/hover = SubResource("Style_selected")
+theme_override_styles/pressed = SubResource("Style_selected")
+text = "Resume"
+alignment = 0
+
+[node name="MainMenu" type="Button" parent="HUD/GameMenu/Center/Panel/Actions"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+focus_neighbor_top = NodePath("../Resume")
+theme_override_styles/normal = SubResource("Style_slot")
+theme_override_styles/hover = SubResource("Style_selected")
+theme_override_styles/pressed = SubResource("Style_selected")
+text = "Main menu"
+alignment = 0
