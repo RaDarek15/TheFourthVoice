@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dqn1iplendh82"]
 
 [ext_resource type="Script" uid="uid://cybx5cm86kpaa" path="res://scripts/TitleScreen.cs" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/fourth-voice-forest.png" id="2_backdrop"]
+[ext_resource type="Texture2D" uid="uid://sen1k0fxyx5o" path="res://assets/fourth-voice-forest.png" id="2_backdrop"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
 offsets = PackedFloat32Array(0, 0.42, 0.82)
@@ -19,24 +19,6 @@ font_weight = 700
 [sub_resource type="FontVariation" id="FontVariation_title"]
 base_font = SubResource("SystemFont_title")
 spacing_glyph = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary"]
-content_margin_left = 18.0
-content_margin_right = 18.0
-bg_color = Color(0.76, 0.81, 0.72, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_hover"]
-content_margin_left = 18.0
-content_margin_right = 18.0
-bg_color = Color(0.89, 0.93, 0.84, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_secondary"]
 content_margin_left = 18.0
@@ -67,6 +49,24 @@ expand_margin_left = 3.0
 expand_margin_top = 3.0
 expand_margin_right = 3.0
 expand_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary"]
+content_margin_left = 18.0
+content_margin_right = 18.0
+bg_color = Color(0.76, 0.81, 0.72, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_hover"]
+content_margin_left = 18.0
+content_margin_right = 18.0
+bg_color = Color(0.89, 0.93, 0.84, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_secondary_hover"]
 content_margin_left = 18.0
@@ -143,15 +143,8 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 0.93, 0.86, 1)
 theme_override_fonts/font = SubResource("FontVariation_title")
 theme_override_font_sizes/font_size = 100
-text = "THE FOURTH\nVOICE"
-
-[node name="Hint" type="Label" parent="Content/Heading" unique_id=2011548039]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.73, 0.79, 0.74, 1)
-theme_override_font_sizes/font_size = 17
-text = "Your flashlight can give you away."
-autowrap_mode = 2
+text = "THE FOURTH
+VOICE"
 
 [node name="Actions" type="VBoxContainer" parent="Content" unique_id=1816464874]
 custom_minimum_size = Vector2(300, 0)
@@ -159,10 +152,11 @@ layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 10
 
-[node name="Nickname" type="LineEdit" parent="Content/Actions"]
+[node name="Nickname" type="LineEdit" parent="Content/Actions" unique_id=990908807]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+tooltip_text = "Use up to 16 letters, numbers, spaces, hyphens, or underscores."
 focus_neighbor_top = NodePath("../Quit")
 focus_neighbor_bottom = NodePath("../Start")
 theme_override_font_sizes/font_size = 16
@@ -170,7 +164,6 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 placeholder_text = "Nickname (optional)"
 max_length = 16
-tooltip_text = "Use up to 16 letters, numbers, spaces, hyphens, or underscores."
 
 [node name="Start" type="Button" parent="Content/Actions" unique_id=1303917636]
 unique_name_in_owner = true
