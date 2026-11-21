@@ -144,13 +144,15 @@ public partial class NetworkManager : Node
 				Stalker stalker = world.Enemy;
 				if (IsInstanceValid(stalker) && stalker.IsPlaced)
 					RpcId(recipient, MethodName.SyncStalker, stalker.GlobalPosition, stalker.Rotation.Y, stalker.IsWalking);
+				if (IsInstanceValid(world.Door))
+					RpcId(recipient, MethodName.SyncDoor, world.Door.Rotation.Y, world.Door.IsOpen);
 			}
 		}
 		else if (IsInstanceValid(world.LocalPlayer))
 		{
 			Player player = world.LocalPlayer;
 			RpcId(HostId, MethodName.SubmitPlayer, player.GlobalPosition, player.Rotation.Y,
-				player.HeadPitch, player.IsFlashlightOn, player.IsWalking);
+				player.HeadPitch, player.HoldingFlashlight, player.IsFlashlightOn, player.IsWalking, player.IsRunning);
 		}
 	}
 
@@ -212,7 +214,7 @@ public partial class NetworkManager : Node
 	private void SendPlayer(int recipient, StringName method, Player player)
 	{
 		RpcId(recipient, method, player.PeerId, player.GlobalPosition, player.Rotation.Y,
-			player.HeadPitch, player.IsFlashlightOn, player.IsWalking);
+			player.HeadPitch, player.HoldingFlashlight, player.IsFlashlightOn, player.IsWalking, player.IsRunning);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -256,34 +258,57 @@ public partial class NetworkManager : Node
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void SpawnPlayer(int id, Vector3 position, float yaw, float pitch, bool flashlight, bool walking)
+	private void SpawnPlayer(int id, Vector3 position, float yaw, float pitch, bool equipped, bool flashlight, bool walking, bool running)
 	{
 		if (!IsInstanceValid(world) || world.GetPlayer(id) != null)
 			return;
 
 		var player = world.SpawnPlayer(id, position, id == Multiplayer.GetUniqueId());
-		player.ApplyPose(position, yaw, pitch, flashlight, walking, snap: true);
+		player.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running, snap: true);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void DespawnPlayer(int id) => world?.RemovePlayer(id);
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SubmitPlayer(Vector3 position, float yaw, float pitch, bool flashlight, bool walking)
+	private void SubmitPlayer(Vector3 position, float yaw, float pitch, bool equipped, bool flashlight, bool walking, bool running)
 	{
 		int id = Multiplayer.GetRemoteSenderId();
 		if (isHost && playerSlots.ContainsKey(id) && position.IsFinite() && float.IsFinite(yaw) && float.IsFinite(pitch))
-			world?.GetPlayer(id)?.ApplyPose(position, yaw, pitch, flashlight, walking);
+			world?.GetPlayer(id)?.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SyncPlayer(int id, Vector3 position, float yaw, float pitch, bool flashlight, bool walking)
+	private void SyncPlayer(int id, Vector3 position, float yaw, float pitch, bool equipped, bool flashlight, bool walking, bool running)
 	{
 		Player player = world?.GetPlayer(id);
 		if (player != null && !player.IsLocalPlayer)
-			player.ApplyPose(position, yaw, pitch, flashlight, walking);
+			player.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void SyncStalker(Vector3 position, float yaw, bool walking) => world?.Enemy?.ApplyPose(position, yaw, walking);
+
+	public void ToggleDoor(HutDoor door)
+	{
+		if (!IsOnline || isHost)
+			door.Toggle();
+		else if (door == world?.Door)
+			RpcId(HostId, MethodName.RequestDoorToggle);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RequestDoorToggle()
+	{
+		int id = Multiplayer.GetRemoteSenderId();
+		if (!isHost || !playerSlots.ContainsKey(id) || world?.Door == null)
+			return;
+
+		Player player = world.GetPlayer(id);
+		if (player != null && (player.GlobalPosition + Vector3.Up).DistanceSquaredTo(world.Door.GlobalPosition) <= 12.25f)
+			world.Door.Toggle();
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
+	private void SyncDoor(float angle, bool open) => world?.Door?.ApplyNetworkState(angle, open);
 }

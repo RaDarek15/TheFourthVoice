@@ -22,7 +22,6 @@ public partial class Player : CharacterBody3D
 	private bool flashlightPowered = true;
 	private bool holdingFlashlight;
 	private bool interactionRequested;
-	private AnimationPlayer avatarAnimation;
 	private Vector3 targetPosition;
 	private float targetYaw;
 	private float targetPitch;
@@ -32,13 +31,15 @@ public partial class Player : CharacterBody3D
 	public bool IsFlashlightOn => flashlight != null && flashlight.IsVisibleInTree();
 	public float HeadPitch => head.Rotation.X;
 	public bool IsWalking { get; private set; }
+	public bool IsRunning { get; private set; }
+	public bool HoldingFlashlight => holdingFlashlight;
 
 	public void ConfigurePeer(int id, bool isLocal, bool online)
 	{
 		PeerId = id;
 		IsLocalPlayer = isLocal;
 		if (online)
-			CollisionLayer = 0;
+			CollisionLayer = 1 << 1;
 	}
 
 	public override void _Ready()
@@ -73,7 +74,21 @@ public partial class Player : CharacterBody3D
 		flashlight.Reparent(lens, keepGlobalTransform: false);
 
 		EquipFlashlight(true);
-		Input.MouseMode = Input.MouseModeEnum.Captured;
+		Camera3D camera = GetNode<Camera3D>("Head/Camera3D");
+		SetProcessUnhandledInput(IsLocalPlayer);
+		if (IsLocalPlayer)
+		{
+			camera.MakeCurrent();
+			Input.MouseMode = Input.MouseModeEnum.Captured;
+		}
+		else
+		{
+			GetNode<CanvasLayer>("HUD").Hide();
+			camera.QueueFree();
+			targetPosition = GlobalPosition;
+			targetYaw = Rotation.Y;
+			targetPitch = HeadPitch;
+		}
 	}
 
 	private void EquipFlashlight(bool equip)
@@ -82,31 +97,13 @@ public partial class Player : CharacterBody3D
 		flashlightItem.Visible = equip;
 		phoneItem.Visible = !equip;
 		flashlight.Visible = equip && flashlightPowered;
+		if (!IsLocalPlayer)
+			return;
+
 		PanelContainer selected = equip ? flashlightSlot : phoneSlot;
 		PanelContainer stowed = equip ? phoneSlot : flashlightSlot;
 		stowed.AddThemeStyleboxOverride("panel", normalSlotStyle);
 		selected.AddThemeStyleboxOverride("panel", SelectedSlotStyle);
-		Camera3D camera = GetNode<Camera3D>("Head/Camera3D");
-		SetProcessUnhandledInput(IsLocalPlayer);
-		if (IsLocalPlayer)
-		{
-			camera.MakeCurrent();
-			Input.MouseMode = Input.MouseModeEnum.Captured;
-			return;
-		}
-
-		camera.QueueFree();
-		var animations = GetNodeOrNull<Node3D>("Avatar")?.FindChildren("*", "AnimationPlayer", owned: false);
-		if (animations != null && animations.Count > 0)
-		{
-			avatarAnimation = (AnimationPlayer)animations[0];
-			foreach (string clip in new[] { "Idle", "Walk" })
-			{
-				if (avatarAnimation.HasAnimation(clip))
-					avatarAnimation.GetAnimation(clip).LoopMode = Animation.LoopModeEnum.Linear;
-			}
-		}
-		ApplyPose(GlobalPosition, Rotation.Y, HeadPitch, IsFlashlightOn, false, snap: true);
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -181,23 +178,20 @@ public partial class Player : CharacterBody3D
 		if (!IsOnFloor())
 			velocity += GetGravity() * (float)delta;
 
+		Vector3 direction = Transform.Basis * new Vector3(input.X, 0f, input.Y);
 		bool sprinting = Input.IsActionPressed("sprint");
 		float speed = sprinting ? Speed * 1.5f : Speed;
 		velocity.X = direction.X * speed;
 		velocity.Z = direction.Z * speed;
 
-		Vector2 input = Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
-		Vector3 direction = Transform.Basis * new Vector3(input.X, 0f, input.Y);
-		velocity.X = direction.X * Speed;
-		velocity.Z = direction.Z * Speed;
 		Velocity = velocity;
 		MoveAndSlide();
 
 		Vector3 travel = GetRealVelocity();
 		travel.Y = 0f;
-		string clip = travel.LengthSquared() < 0.04f ? "Idle" : sprinting ? "Run" : "Walk";
-		if (animator.CurrentAnimation != clip)
-			animator.Play(clip, 0.16);
+		IsWalking = travel.LengthSquared() >= 0.04f;
+		IsRunning = IsWalking && sprinting;
+		UpdateAnimation();
 
 		if (interactionRequested)
 			interactionRay.ForceRaycastUpdate();
@@ -206,21 +200,22 @@ public partial class Player : CharacterBody3D
 		if (door != null)
 		{
 			if (interactionRequested)
-				door.Toggle();
+				GetNode<NetworkManager>("/root/NetworkManager").ToggleDoor(door);
 			interactionHint.Text = door.InteractionHint;
 		}
 		interactionRequested = false;
-		Vector3 movement = GetRealVelocity();
-		IsWalking = IsOnFloor() && new Vector2(movement.X, movement.Z).LengthSquared() > 0.04f;
 	}
 
-	public void ApplyPose(Vector3 position, float yaw, float pitch, bool beamOn, bool walking, bool snap = false)
+	public void ApplyPose(Vector3 position, float yaw, float pitch, bool equipped, bool beamOn, bool walking, bool running, bool snap = false)
 	{
 		targetPosition = position;
 		targetYaw = yaw;
 		targetPitch = pitch;
-		flashlight.Visible = beamOn;
+		if (equipped)
+			flashlightPowered = beamOn;
+		EquipFlashlight(equipped);
 		IsWalking = walking;
+		IsRunning = running;
 		if (snap || GlobalPosition.DistanceSquaredTo(position) > 25f)
 		{
 			GlobalPosition = position;
@@ -228,9 +223,14 @@ public partial class Player : CharacterBody3D
 			head.Rotation = new Vector3(pitch, 0f, 0f);
 		}
 
-		string clip = walking ? "Walk" : "Idle";
-		if (avatarAnimation != null && avatarAnimation.CurrentAnimation != clip && avatarAnimation.HasAnimation(clip))
-			avatarAnimation.Play(clip, 0.15);
+		UpdateAnimation();
+	}
+
+	private void UpdateAnimation()
+	{
+		string clip = IsRunning ? "Run" : IsWalking ? "Walk" : "Idle";
+		if (animator.CurrentAnimation != clip)
+			animator.Play(clip, 0.16);
 	}
 
 	private void ToggleFullscreen()

@@ -6,7 +6,6 @@ public partial class World : Node3D
 	[Export] public Mesh TreeMesh;
 	[Export] public PackedScene CrookedTreeModel;
 	[Export] public PackedScene PlayerScene;
-	[Export] public PackedScene PlayerAvatar;
 	[Export] public Marker3D PlayerSpawn;
 	[Export] public Node3D Terrain;
 	[Export] public PackedScene TrailStoneModel;
@@ -59,6 +58,7 @@ public partial class World : Node3D
 
 	public Player LocalPlayer { get; private set; }
 	public Stalker Enemy { get; private set; }
+	public HutDoor Door { get; private set; }
 	public IEnumerable<Player> Players => players.Values;
 	public Vector3 SpawnPosition => PlayerSpawn.GlobalPosition;
 	private float PlayerSpawnClearance => SpawnClearance + (network.IsOnline ? NetworkManager.SpawnSpacing : 0f);
@@ -74,6 +74,7 @@ public partial class World : Node3D
 
 		network = GetNode<NetworkManager>("/root/NetworkManager");
 		Enemy = GetNodeOrNull<Stalker>("Stalker");
+		Door = GetNodeOrNull<HutDoor>("MapProps/ForesterHut/FrontDoor");
 		AddBatch("Forest", TreeMesh);
 		if (CrookedTreeModel != null)
 		{
@@ -106,14 +107,6 @@ public partial class World : Node3D
 		player.Name = online ? $"Player_{id}" : "Player";
 		player.Position = parent.ToLocal(position);
 		player.ConfigurePeer(id, isLocal, online);
-		if (!isLocal && PlayerAvatar != null)
-		{
-			var avatar = PlayerAvatar.Instantiate<Node3D>();
-			avatar.Name = "Avatar";
-			avatar.Rotation = new Vector3(0f, Mathf.Pi, 0f);
-			player.AddChild(avatar);
-		}
-
 		players.Add(id, player);
 		parent.AddChild(player);
 		if (isLocal)

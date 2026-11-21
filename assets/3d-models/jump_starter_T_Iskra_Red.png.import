@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cpyoof8hbp5wv"
-path="res://.godot/imported/jump_starter_T_Iskra_Red.png-d11f74cab17ea3f87fa8f1876fd6fb3e.ctex"
+path.s3tc="res://.godot/imported/jump_starter_T_Iskra_Red.png-d11f74cab17ea3f87fa8f1876fd6fb3e.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "04c3751048672168cc61afcc39dda521"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/3d-models/jump_starter_T_Iskra_Red.png"
-dest_files=["res://.godot/imported/jump_starter_T_Iskra_Red.png-d11f74cab17ea3f87fa8f1876fd6fb3e.ctex"]
+dest_files=["res://.godot/imported/jump_starter_T_Iskra_Red.png-d11f74cab17ea3f87fa8f1876fd6fb3e.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

@@ -2,6 +2,8 @@
 using Godot;
 using System.Collections.Generic;
 
+namespace LegacyNetwork;
+
 public partial class NetworkManager : Node
 {
 	// Konfiguracja sieci

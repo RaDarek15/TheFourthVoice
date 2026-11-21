@@ -14,7 +14,6 @@
 [ext_resource type="PackedScene" path="res://assets/3d-models/rock_a.glb" id="11_forest_stone"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/bush_a.glb" id="12_bush_a"]
 [ext_resource type="PackedScene" path="res://assets/3d-models/bush_b.glb" id="13_bush_b"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/player.glb" id="14_avatar"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1j20i"]
 resource_name = "M_Pine_Bark"
@@ -115,7 +114,6 @@ script = ExtResource("1_rwgxs")
 TreeMesh = SubResource("ArrayMesh_4mrxx")
 CrookedTreeModel = ExtResource("5_crooked")
 PlayerScene = ExtResource("1_nnsk1")
-PlayerAvatar = ExtResource("14_avatar")
 PlayerSpawn = NodePath("PlayerSpawn")
 Terrain = NodePath("Ground")
 TrailStoneModel = ExtResource("10_trail_stone")
