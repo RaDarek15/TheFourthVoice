@@ -49,6 +49,7 @@ corner_radius_bottom_left = 5
 [node name="Player" type="CharacterBody3D" unique_id=1126685206]
 collision_layer = 3
 script = ExtResource("1_3vyb7")
+Speed = 3.5
 PhoneModel = ExtResource("3_phone")
 FlashlightModel = ExtResource("4_flashlight")
 SelectedSlotStyle = SubResource("Style_selected")
@@ -84,13 +85,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.15)
 near = 0.08
 
 [node name="InteractionRay" type="RayCast3D" parent="Head/Camera3D" unique_id=701773934]
-collision_mask = 5
 target_position = Vector3(0, 0, -2.4)
+collision_mask = 5
 
 [node name="Flashlight" type="SpotLight3D" parent="Head" unique_id=423311576]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.015)
-light_energy = 2.0
 light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 2.0
 light_volumetric_fog_energy = 5.0
 spot_range = 18.5
 spot_angle = 31.44
@@ -168,6 +169,14 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "2   Flashlight (V)"
 
+[node name="JumpStarterItem" type="Label" parent="HUD/Hotbar" unique_id=1686466313]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.88, 0.67, 1)
+theme_override_colors/font_outline_color = Color(0.025, 0.032, 0.029, 1)
+theme_override_constants/outline_size = 4
+text = "Jump starter"
+
 [node name="MenuHint" type="Label" parent="HUD" unique_id=1081224510]
 anchors_preset = 3
 anchor_left = 1.0
@@ -186,15 +195,9 @@ text = "Esc   Menu"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="JumpStarterItem" type="Label" parent="HUD/Hotbar"]
-visible = false
-layout_mode = 2
-theme_override_colors/font_color = Color(0.88, 0.88, 0.67, 1)
-theme_override_colors/font_outline_color = Color(0.025, 0.032, 0.029, 1)
-theme_override_constants/outline_size = 4
-text = "Jump starter"
-
-[node name="EscapeHUD" parent="HUD" instance=ExtResource("7_escape_hud")]
+[node name="EscapeHUD" parent="HUD" unique_id=641906499 instance=ExtResource("7_escape_hud")]
+layout_mode = 3
+anchors_preset = 15
 
 [node name="GameMenu" type="ColorRect" parent="HUD" unique_id=2052126261]
 visible = false
@@ -208,6 +211,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="HUD/GameMenu/Center" unique_id=1040681314]

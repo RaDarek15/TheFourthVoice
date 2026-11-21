@@ -2,7 +2,7 @@ using Godot;
 
 public partial class TitleScreen : Control
 {
-	private const string DefaultHint = "Your flashlight can give you away.";
+	private const string DefaultHint = "Three went in. \nFour voices answered.​";
 
 	private Button startButton;
 	private Button hostButton;
