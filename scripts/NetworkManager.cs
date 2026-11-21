@@ -8,6 +8,7 @@ public partial class NetworkManager : Node
 	public const int MaxPlayers = 3;
 	public const float SpawnSpacing = 2f;
 
+	private const int MinPlayers = 2;
 	private const string WorldScene = "res://scenes/world.tscn";
 	private const string TitleScene = "res://scenes/title_screen.tscn";
 	private const double JoinTimeout = 10.0;
@@ -32,7 +33,7 @@ public partial class NetworkManager : Node
 
 	public bool IsOnline => peer != null;
 	public bool IsHosting => isHost;
-	public bool CanStart => isHost && !launching && !matchStarted && lobby.Count == GroupSize;
+	public bool CanStart => isHost && !launching && !matchStarted && lobby.Count >= MinPlayers;
 	public int GroupSize { get; private set; }
 	public string[] MatchNames { get; private set; } = System.Array.Empty<string>();
 	public string LocalNickname => nickname;
@@ -80,7 +81,7 @@ public partial class NetworkManager : Node
 	{
 		if (IsOnline)
 			return Error.AlreadyInUse;
-		if (!IsValidNickname(name) || groupSize < 2 || groupSize > MaxPlayers)
+		if (!IsValidNickname(name) || groupSize < MinPlayers || groupSize > MaxPlayers)
 			return Error.InvalidParameter;
 
 		var connection = new ENetMultiplayerPeer();
@@ -107,6 +108,7 @@ public partial class NetworkManager : Node
 			return;
 
 		peer.RefuseNewConnections = true;
+		GroupSize = lobby.Count;
 		WorldSeed = GD.Randi();
 		matchPeers = new int[lobby.Count];
 		lobby.Keys.CopyTo(matchPeers, 0);
@@ -145,7 +147,7 @@ public partial class NetworkManager : Node
 		isHost = false;
 		joinTimeRemaining = JoinTimeout;
 		Multiplayer.MultiplayerPeer = peer;
-		SetMenuStatus($"Łączenie z {address}…", true);
+		SetMenuStatus($"Connecting to {address}…", true);
 		return Error.Ok;
 	}
 
@@ -187,7 +189,7 @@ public partial class NetworkManager : Node
 		{
 			joinTimeRemaining -= delta;
 			if (joinTimeRemaining <= 0)
-				JoinFailed("Brak odpowiedzi hosta. Sprawdź adres i połączenie.");
+				JoinFailed("Connection timed out. Check the host IP and network.");
 		}
 
 		long now = (long)Time.GetTicksMsec();
@@ -200,7 +202,7 @@ public partial class NetworkManager : Node
 			startAt = -1;
 		}
 		else if (launchDeadline > 0 && now >= launchDeadline)
-			AbortStart("Nie wszyscy gracze załadowali las.");
+			AbortStart("A player timed out while loading the forest.");
 	}
 
 	public override void _PhysicsProcess(double delta)
@@ -254,7 +256,7 @@ public partial class NetworkManager : Node
 
 		if (launching)
 		{
-			AbortStart("Gracz opuścił lobby w trakcie wczytywania.");
+			AbortStart("A player left while the forest was loading.");
 			return;
 		}
 		if (!matchStarted)
@@ -267,9 +269,9 @@ public partial class NetworkManager : Node
 		Rpc(MethodName.DespawnPlayer, (int)id);
 	}
 
-	private void OnConnectionFailed() => JoinFailed("Nie udało się połączyć z hostem.");
+	private void OnConnectionFailed() => JoinFailed("Could not connect to the host.");
 
-	private void OnServerDisconnected() => AbortStart("Host się rozłączył.");
+	private void OnServerDisconnected() => AbortStart("The host disconnected.");
 
 	private void AbortStart(string message)
 	{
@@ -364,11 +366,11 @@ public partial class NetworkManager : Node
 
 	private void ShowRoster(string[] names)
 	{
-		string status = $"Lobby LAN · {names.Length}/{GroupSize}\n{string.Join("  ·  ", names)}";
-		if (names.Length < GroupSize)
-			status += "\nCzekanie na graczy…";
+		string status = $"LAN lobby · {names.Length}/{GroupSize}\n{string.Join("  ·  ", names)}";
+		if (names.Length < MinPlayers)
+			status += "\nWaiting for players…";
 		else if (!isHost)
-			status += "\nCzekanie na start hosta…";
+			status += "\nWaiting for the host to start…";
 		SetMenuStatus(status, false);
 	}
 
@@ -376,23 +378,24 @@ public partial class NetworkManager : Node
 	{
 		launching = true;
 		launchDeadline = (long)Time.GetTicksMsec() + 30000;
-		SetMenuStatus("Wczytywanie lasu…", true);
+		SetMenuStatus("Loading the forest…", true);
 	}
 
 	private void LoadWorld()
 	{
 		if (GetTree().ChangeSceneToFile(WorldScene) != Error.Ok)
-			JoinFailed("Nie udało się wczytać lasu.");
+			JoinFailed("Couldn't load the forest.");
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void OpenWorld(long seed, int[] ids, string[] names)
 	{
-		if (!IsOnline || isHost || launching || GroupSize < 2 || ids.Length != GroupSize ||
+		if (!IsOnline || isHost || launching || ids.Length < MinPlayers || ids.Length > GroupSize ||
 			names.Length != ids.Length || System.Array.IndexOf(ids, Multiplayer.GetUniqueId()) < 0)
 			return;
 
 		WorldSeed = seed;
+		GroupSize = ids.Length;
 		matchPeers = ids;
 		MatchNames = names;
 		BeginLoading();

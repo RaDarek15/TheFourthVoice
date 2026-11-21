@@ -9,7 +9,7 @@
 [ext_resource type="AudioStream" path="res://assets/audio/intro/woods.wav" id="8_woods"]
 [ext_resource type="AudioStream" path="res://assets/audio/intro/footstep.wav" id="9_step"]
 [ext_resource type="AudioStream" path="res://assets/audio/intro/call_failed.wav" id="10_call"]
-[ext_resource type="AudioStream" path="res://assets/3d-models/beetpro-whistle-reverse-fun-sound-effect-33-11848.mp3" id="11_whistle"]
+[ext_resource type="AudioStream" path="res://assets/sounds/whistle.mp3" id="11_whistle"]
 
 [sub_resource type="Environment" id="Environment_intro"]
 background_mode = 1
