@@ -118,7 +118,7 @@ anchor_right = 0.925
 anchor_bottom = 1.0
 offset_bottom = -20.0
 mouse_filter = 2
-theme_override_constants/separation = 27
+theme_override_constants/separation = 16
 alignment = 1
 
 [node name="Heading" type="VBoxContainer" parent="Content"]
@@ -146,21 +146,30 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.73, 0.79, 0.74, 1)
 theme_override_font_sizes/font_size = 17
-text = "Your flashlight can give you away."
+text = "Podaj nick. Możesz zagrać solo lub utworzyć lobby LAN."
 autowrap_mode = 2
 
 [node name="Actions" type="VBoxContainer" parent="Content"]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
-theme_override_constants/separation = 10
+theme_override_constants/separation = 7
+
+[node name="Nickname" type="LineEdit" parent="Content/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+theme_override_font_sizes/font_size = 16
+placeholder_text = "Nick (1–16 znaków)"
+max_length = 16
+tooltip_text = "Litery, cyfry, spacje, myślnik lub podkreślenie."
 
 [node name="Start" type="Button" parent="Content/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
-focus_neighbor_top = NodePath("../Quit")
-focus_neighbor_bottom = NodePath("../Host")
 theme_override_colors/font_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_colors/font_focus_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_colors/font_hover_color = Color(0.05, 0.08, 0.06, 1)
@@ -171,15 +180,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_primary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_primary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_secondary")
-text = "Start game"
+text = "Rozpocznij LAN"
 alignment = 0
 
-[node name="Host" type="Button" parent="Content/Actions"]
+[node name="Solo" type="Button" parent="Content/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
-focus_neighbor_top = NodePath("../Start")
-focus_neighbor_bottom = NodePath("../JoinRow/HostAddress")
 theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
 theme_override_font_sizes/font_size = 17
@@ -187,34 +194,55 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
 theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
-text = "Host LAN game"
+text = "Zagraj solo"
+alignment = 0
+
+[node name="HostRow" type="HBoxContainer" parent="Content/Actions"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="GroupSize" type="OptionButton" parent="Content/Actions/HostRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(105, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+
+[node name="Host" type="Button" parent="Content/Actions/HostRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
+theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+text = "Utwórz lobby LAN"
 alignment = 0
 
 [node name="JoinRow" type="HBoxContainer" parent="Content/Actions"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 7
 
 [node name="HostAddress" type="LineEdit" parent="Content/Actions/JoinRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(175, 46)
+custom_minimum_size = Vector2(188, 38)
 layout_mode = 2
 size_flags_horizontal = 3
-focus_neighbor_top = NodePath("../../Host")
-focus_neighbor_right = NodePath("../Join")
-focus_neighbor_bottom = NodePath("../../Quit")
 theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_font_sizes/font_size = 16
-placeholder_text = "Host IP address"
+placeholder_text = "Adres IP hosta"
 max_length = 45
 
 [node name="Join" type="Button" parent="Content/Actions/JoinRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(81, 46)
+custom_minimum_size = Vector2(97, 38)
 layout_mode = 2
-focus_neighbor_top = NodePath("../../Host")
-focus_neighbor_left = NodePath("../HostAddress")
-focus_neighbor_bottom = NodePath("../../Quit")
 theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
 theme_override_font_sizes/font_size = 17
@@ -222,14 +250,27 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
 theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
-text = "Join"
+text = "Dołącz"
+
+[node name="Leave" type="Button" parent="Content/Actions"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
+theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+text = "Opuść lobby"
+alignment = 0
 
 [node name="Quit" type="Button" parent="Content/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
-focus_neighbor_top = NodePath("../JoinRow/Join")
-focus_neighbor_bottom = NodePath("../Start")
 theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
 theme_override_font_sizes/font_size = 17
@@ -237,7 +278,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
 theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
-text = "Quit"
+text = "Wyjdź"
 alignment = 0
 
 [node name="Controls" type="Label" parent="."]

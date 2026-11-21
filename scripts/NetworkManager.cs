@@ -14,6 +14,16 @@ public partial class NetworkManager : Node
 	private const double SnapshotInterval = 0.05;
 
 	private readonly Dictionary<int, int> playerSlots = new();
+	private readonly Dictionary<int, string> lobby = new();
+	private readonly HashSet<int> readyPeers = new();
+	private readonly Dictionary<int, long> clockOffsets = new();
+	private int[] matchPeers = System.Array.Empty<int>();
+	private string nickname = "";
+	private bool launching;
+	private bool matchStarted;
+	private long launchDeadline;
+	private long startAt = -1;
+	private long clockProbeAt = -1;
 	private ENetMultiplayerPeer peer;
 	private World world;
 	private bool isHost;
@@ -21,6 +31,11 @@ public partial class NetworkManager : Node
 	private double snapshotTimer;
 
 	public bool IsOnline => peer != null;
+	public bool IsHosting => isHost;
+	public bool CanStart => isHost && !launching && !matchStarted && lobby.Count == GroupSize;
+	public int GroupSize { get; private set; }
+	public string[] MatchNames { get; private set; } = System.Array.Empty<string>();
+	public string LocalNickname => nickname;
 	public long WorldSeed { get; private set; }
 	public string MenuMessage { get; private set; } = "";
 
@@ -35,13 +50,41 @@ public partial class NetworkManager : Node
 		Multiplayer.ServerDisconnected += OnServerDisconnected;
 	}
 
-	public Error CreateServer()
+	public static bool IsValidNickname(string name)
+	{
+		name = name.Trim();
+		if (name.Length < 1 || name.Length > 16)
+			return false;
+
+		foreach (char character in name)
+		{
+			if (!char.IsLetterOrDigit(character) && character != ' ' && character != '_' && character != '-')
+				return false;
+		}
+		return true;
+	}
+
+	public Error PlaySolo(string name)
+	{
+		if (IsOnline || !IsValidNickname(name))
+			return Error.InvalidParameter;
+		nickname = name.Trim();
+		MatchNames = new[] { nickname, "Pasażer z przodu", "Pasażer z tyłu" };
+		Error result = GetTree().ChangeSceneToFile(WorldScene);
+		if (result != Error.Ok)
+			CloseSession();
+		return result;
+	}
+
+	public Error CreateServer(string name, int groupSize)
 	{
 		if (IsOnline)
 			return Error.AlreadyInUse;
+		if (!IsValidNickname(name) || groupSize < 2 || groupSize > MaxPlayers)
+			return Error.InvalidParameter;
 
 		var connection = new ENetMultiplayerPeer();
-		Error result = connection.CreateServer(Port, MaxPlayers - 1);
+		Error result = connection.CreateServer(Port, groupSize - 1);
 		if (result != Error.Ok)
 		{
 			connection.Dispose();
@@ -49,22 +92,44 @@ public partial class NetworkManager : Node
 		}
 
 		isHost = true;
-		WorldSeed = GD.Randi();
+		nickname = name.Trim();
+		GroupSize = groupSize;
+		lobby.Add(HostId, nickname);
 		peer = connection;
 		Multiplayer.MultiplayerPeer = peer;
-		result = GetTree().ChangeSceneToFile(WorldScene);
-		if (result != Error.Ok)
-			CloseSession();
-		return result;
+		PublishLobby();
+		return Error.Ok;
 	}
 
-	public Error JoinServer(string address)
+	public void StartMatch()
+	{
+		if (!CanStart)
+			return;
+
+		peer.RefuseNewConnections = true;
+		WorldSeed = GD.Randi();
+		matchPeers = new int[lobby.Count];
+		lobby.Keys.CopyTo(matchPeers, 0);
+		System.Array.Sort(matchPeers);
+		MatchNames = System.Array.ConvertAll(matchPeers, id => lobby[id]);
+		BeginLoading();
+		Rpc(MethodName.OpenWorld, WorldSeed, matchPeers, MatchNames);
+		LoadWorld();
+	}
+
+	public void LeaveLobby()
+	{
+		CloseSession();
+		SetMenuStatus("", false);
+	}
+
+	public Error JoinServer(string address, string name)
 	{
 		if (IsOnline)
 			return Error.AlreadyInUse;
 
 		address = address.Trim();
-		if (!System.Net.IPAddress.TryParse(address, out var ip))
+		if (!IsValidNickname(name) || !System.Net.IPAddress.TryParse(address, out var ip))
 			return Error.InvalidParameter;
 
 		var connection = new ENetMultiplayerPeer();
@@ -76,22 +141,30 @@ public partial class NetworkManager : Node
 		}
 
 		peer = connection;
+		nickname = name.Trim();
 		isHost = false;
 		joinTimeRemaining = JoinTimeout;
 		Multiplayer.MultiplayerPeer = peer;
-		SetMenuStatus($"Connecting to {address}…", true);
+		SetMenuStatus($"Łączenie z {address}…", true);
 		return Error.Ok;
 	}
 
 	public void RegisterWorld(World activeWorld)
 	{
 		world = activeWorld;
+		int localId = Multiplayer.GetUniqueId();
+		for (int slot = 0; slot < matchPeers.Length; slot++)
+		{
+			int id = matchPeers[slot];
+			playerSlots.Add(id, slot);
+			world.SpawnPlayer(id, world.StartPosition(slot), id == localId, MatchNames[slot]);
+		}
 		if (isHost)
 		{
-			playerSlots.Add(HostId, 0);
-			world.SpawnPlayer(HostId, world.SpawnPosition, true);
+			readyPeers.Add(HostId);
+			ProbeClocksWhenReady();
 		}
-		else if (IsOnline)
+		else
 			RpcId(HostId, MethodName.ClientReady);
 	}
 
@@ -110,17 +183,29 @@ public partial class NetworkManager : Node
 
 	public override void _Process(double delta)
 	{
-		if (joinTimeRemaining <= 0)
-			return;
+		if (joinTimeRemaining > 0)
+		{
+			joinTimeRemaining -= delta;
+			if (joinTimeRemaining <= 0)
+				JoinFailed("Brak odpowiedzi hosta. Sprawdź adres i połączenie.");
+		}
 
-		joinTimeRemaining -= delta;
-		if (joinTimeRemaining <= 0)
-			JoinFailed("Connection timed out. Check the host IP and firewall.");
+		long now = (long)Time.GetTicksMsec();
+		if (startAt >= 0 && now >= startAt)
+		{
+			launching = false;
+			matchStarted = true;
+			launchDeadline = 0;
+			world.StartOpening(startAt);
+			startAt = -1;
+		}
+		else if (launchDeadline > 0 && now >= launchDeadline)
+			AbortStart("Nie wszyscy gracze załadowali las.");
 	}
 
 	public override void _PhysicsProcess(double delta)
 	{
-		if (!IsOnline || !IsInstanceValid(world))
+		if (!matchStarted || !IsInstanceValid(world))
 			return;
 
 		snapshotTimer += delta;
@@ -158,31 +243,42 @@ public partial class NetworkManager : Node
 
 	private void OnPeerConnected(long id)
 	{
-		if (isHost)
-			RpcId(id, MethodName.OpenWorld, WorldSeed);
+		if (!isHost && id == HostId)
+			RpcId(HostId, MethodName.RegisterNickname, nickname);
 	}
 
 	private void OnPeerDisconnected(long id)
 	{
-		if (!isHost || !playerSlots.Remove((int)id))
+		if (!isHost || !lobby.Remove((int)id))
 			return;
 
-		world?.RemovePlayer((int)id);
-		foreach (int recipient in playerSlots.Keys)
+		if (launching)
 		{
-			if (recipient != HostId)
-				RpcId(recipient, MethodName.DespawnPlayer, (int)id);
+			AbortStart("Gracz opuścił lobby w trakcie wczytywania.");
+			return;
 		}
+		if (!matchStarted)
+		{
+			PublishLobby();
+			return;
+		}
+		playerSlots.Remove((int)id);
+		world?.RemovePlayer((int)id);
+		Rpc(MethodName.DespawnPlayer, (int)id);
 	}
 
-	private void OnConnectionFailed() => JoinFailed("Could not connect. Check the host IP and firewall.");
+	private void OnConnectionFailed() => JoinFailed("Nie udało się połączyć z hostem.");
 
-	private void OnServerDisconnected()
+	private void OnServerDisconnected() => AbortStart("Host się rozłączył.");
+
+	private void AbortStart(string message)
 	{
-		if (IsInstanceValid(world))
-			ReturnToTitle("The host disconnected.");
+		startAt = -1;
+		launchDeadline = 0;
+		if (IsInstanceValid(world) || launching || matchStarted)
+			CallDeferred(nameof(ReturnToTitle), message);
 		else
-			JoinFailed("The host disconnected.");
+			JoinFailed(message);
 	}
 
 	private void JoinFailed(string message)
@@ -199,7 +295,18 @@ public partial class NetworkManager : Node
 		if (hadConnection)
 			Multiplayer.MultiplayerPeer = null;
 		playerSlots.Clear();
+		lobby.Clear();
+		readyPeers.Clear();
+		clockOffsets.Clear();
+		matchPeers = System.Array.Empty<int>();
+		MatchNames = System.Array.Empty<string>();
+		GroupSize = 0;
 		isHost = false;
+		launching = false;
+		matchStarted = false;
+		launchDeadline = 0;
+		startAt = -1;
+		clockProbeAt = -1;
 		WorldSeed = 0;
 		joinTimeRemaining = 0;
 		snapshotTimer = 0;
@@ -217,54 +324,130 @@ public partial class NetworkManager : Node
 			player.HeadPitch, player.HoldingFlashlight, player.IsFlashlightOn, player.IsWalking, player.IsRunning);
 	}
 
-	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void OpenWorld(long seed)
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RegisterNickname(string name)
 	{
-		if (!IsOnline || isHost || joinTimeRemaining <= 0)
+		int id = Multiplayer.GetRemoteSenderId();
+		if (!isHost || launching || matchStarted || id <= HostId || lobby.ContainsKey(id))
 			return;
 
+		if (!IsValidNickname(name) || lobby.Count >= GroupSize)
+		{
+			peer.DisconnectPeer(id);
+			return;
+		}
+		lobby.Add(id, name.Trim());
+		PublishLobby();
+	}
+
+	private void PublishLobby()
+	{
+		var names = new string[lobby.Count];
+		lobby.Values.CopyTo(names, 0);
+		foreach (int id in lobby.Keys)
+		{
+			if (id != HostId)
+				RpcId(id, MethodName.ReceiveLobby, GroupSize, names);
+		}
+		ShowRoster(names);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void ReceiveLobby(int size, string[] names)
+	{
+		if (!IsOnline || isHost || launching)
+			return;
 		joinTimeRemaining = 0;
-		WorldSeed = seed;
-		SetMenuStatus("Loading the forest…", true);
+		GroupSize = size;
+		ShowRoster(names);
+	}
+
+	private void ShowRoster(string[] names)
+	{
+		string status = $"Lobby LAN · {names.Length}/{GroupSize}\n{string.Join("  ·  ", names)}";
+		if (names.Length < GroupSize)
+			status += "\nCzekanie na graczy…";
+		else if (!isHost)
+			status += "\nCzekanie na start hosta…";
+		SetMenuStatus(status, false);
+	}
+
+	private void BeginLoading()
+	{
+		launching = true;
+		launchDeadline = (long)Time.GetTicksMsec() + 30000;
+		SetMenuStatus("Wczytywanie lasu…", true);
+	}
+
+	private void LoadWorld()
+	{
 		if (GetTree().ChangeSceneToFile(WorldScene) != Error.Ok)
-			JoinFailed("Could not open the forest.");
+			JoinFailed("Nie udało się wczytać lasu.");
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void OpenWorld(long seed, int[] ids, string[] names)
+	{
+		if (!IsOnline || isHost || launching || GroupSize < 2 || ids.Length != GroupSize ||
+			names.Length != ids.Length || System.Array.IndexOf(ids, Multiplayer.GetUniqueId()) < 0)
+			return;
+
+		WorldSeed = seed;
+		matchPeers = ids;
+		MatchNames = names;
+		BeginLoading();
+		LoadWorld();
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void ClientReady()
 	{
 		int id = Multiplayer.GetRemoteSenderId();
-		if (!isHost || id <= HostId || !IsInstanceValid(world) || playerSlots.ContainsKey(id))
+		if (!isHost || !launching || id <= HostId || !lobby.ContainsKey(id))
 			return;
+		readyPeers.Add(id);
+		ProbeClocksWhenReady();
+	}
 
-		for (int slot = 1; slot < MaxPlayers; slot++)
-		{
-			if (playerSlots.ContainsValue(slot))
-				continue;
-
-			float side = slot == 1 ? 1f : -1f;
-			Player newcomer = world.SpawnPlayer(id, world.SpawnPosition + Vector3.Right * (SpawnSpacing * side), false);
-			foreach (Player player in world.Players)
-				SendPlayer(id, MethodName.SpawnPlayer, player);
-
-			foreach (int recipient in playerSlots.Keys)
-			{
-				if (recipient != HostId)
-					SendPlayer(recipient, MethodName.SpawnPlayer, newcomer);
-			}
-			playerSlots.Add(id, slot);
+	private void ProbeClocksWhenReady()
+	{
+		if (readyPeers.Count != GroupSize || clockProbeAt >= 0)
 			return;
-		}
+		clockProbeAt = (long)Time.GetTicksMsec();
+		Rpc(MethodName.ReadClock);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void SpawnPlayer(int id, Vector3 position, float yaw, float pitch, bool equipped, bool flashlight, bool walking, bool running)
+	private void ReadClock()
 	{
-		if (!IsInstanceValid(world) || world.GetPlayer(id) != null)
+		if (launching && !isHost && IsInstanceValid(world))
+			RpcId(HostId, MethodName.ReportClock, (long)Time.GetTicksMsec());
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void ReportClock(long clientTick)
+	{
+		int id = Multiplayer.GetRemoteSenderId();
+		if (!isHost || !launching || clockProbeAt < 0 || startAt >= 0 || id <= HostId ||
+			!readyPeers.Contains(id) || clientTick < 0 || clientTick > long.MaxValue / 2)
 			return;
 
-		var player = world.SpawnPlayer(id, position, id == Multiplayer.GetUniqueId());
-		player.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running, snap: true);
+		long now = (long)Time.GetTicksMsec();
+		// Estimate the host tick when the client sampled its clock using half the round trip.
+		clockOffsets.TryAdd(id, clientTick - (clockProbeAt + now) / 2);
+		if (clockOffsets.Count != GroupSize - 1)
+			return;
+
+		startAt = now + 1500;
+		foreach (var clock in clockOffsets)
+			RpcId(clock.Key, MethodName.ScheduleStart, startAt + clock.Value);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void ScheduleStart(long localTick)
+	{
+		if (launching && !isHost && IsInstanceValid(world))
+			startAt = System.Math.Max(0, localTick);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

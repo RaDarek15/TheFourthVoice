@@ -2,38 +2,53 @@ using Godot;
 
 public partial class TitleScreen : Control
 {
-	private const string WorldScene = "res://scenes/world.tscn";
-
 	private Button startButton;
+	private Button soloButton;
 	private Button hostButton;
 	private Button joinButton;
+	private Button leaveButton;
 	private LineEdit address;
+	private LineEdit nickname;
+	private OptionButton groupSize;
 	private Label title;
 	private Label hint;
 	private NetworkManager network;
+	private bool busy;
 
 	public override void _Ready()
 	{
 		title = GetNode<Label>("%Title");
 		hint = GetNode<Label>("%Hint");
 		startButton = GetNode<Button>("%Start");
+		soloButton = GetNode<Button>("%Solo");
 		hostButton = GetNode<Button>("%Host");
 		joinButton = GetNode<Button>("%Join");
+		leaveButton = GetNode<Button>("%Leave");
 		address = GetNode<LineEdit>("%HostAddress");
+		nickname = GetNode<LineEdit>("%Nickname");
+		groupSize = GetNode<OptionButton>("%GroupSize");
 		network = GetNode<NetworkManager>("/root/NetworkManager");
-		startButton.Pressed += StartGame;
+
+		groupSize.AddItem("2 graczy", 2);
+		groupSize.AddItem("3 graczy", 3);
+		groupSize.Select(1);
+		nickname.Text = network.LocalNickname;
+		nickname.TextChanged += _ => RefreshActions();
+		address.TextChanged += _ => RefreshActions();
+		address.TextSubmitted += _ => JoinGame();
+		soloButton.Pressed += PlaySolo;
+		startButton.Pressed += network.StartMatch;
 		hostButton.Pressed += HostGame;
 		joinButton.Pressed += JoinGame;
-		address.TextSubmitted += _ => JoinGame();
+		leaveButton.Pressed += network.LeaveLobby;
 		GetNode<Button>("%Quit").Pressed += () => GetTree().Quit();
 		network.MenuStatusChanged += ShowStatus;
-		if (!string.IsNullOrEmpty(network.MenuMessage))
-			ShowStatus(network.MenuMessage, false);
 		Resized += FitTitle;
 
 		FitTitle();
+		ShowStatus(network.MenuMessage, false);
 		Input.MouseMode = Input.MouseModeEnum.Visible;
-		startButton.GrabFocus();
+		nickname.GrabFocus();
 	}
 
 	public override void _ExitTree()
@@ -44,36 +59,26 @@ public partial class TitleScreen : Control
 
 	private void FitTitle()
 	{
-		int fontSize = Mathf.RoundToInt(Mathf.Clamp(Size.X * 0.085f, 48f, 116f));
+		int fontSize = Mathf.RoundToInt(Mathf.Clamp(Mathf.Min(Size.X * 0.085f, Size.Y * 0.14f), 42f, 116f));
 		title.AddThemeFontSizeOverride("font_size", fontSize);
 	}
 
-	private async void StartGame()
+	private void PlaySolo()
 	{
-		string caption = startButton.Text;
-		SetBusy(true);
-		startButton.Text = "Loading…";
-
-		SceneTree tree = GetTree();
-		await ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-		await ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-		Error result = tree.ChangeSceneToFile(WorldScene);
-		if (result == Error.Ok)
+		if (soloButton.Disabled)
 			return;
-
-		GD.PushError($"Could not open {WorldScene}: {result}");
-		hint.Text = "Couldn't load the forest. Try again.";
-		startButton.Text = caption;
-		SetBusy(false);
-		startButton.GrabFocus();
+		ShowStatus("Wczytywanie lasu…", true);
+		if (network.PlaySolo(nickname.Text) != Error.Ok)
+			ShowStatus("Nie udało się wczytać lasu.", false);
 	}
 
 	private void HostGame()
 	{
-		ShowStatus("Opening the forest on UDP port 7777…", true);
-		Error result = network.CreateServer();
+		if (hostButton.Disabled)
+			return;
+		Error result = network.CreateServer(nickname.Text, groupSize.GetSelectedId());
 		if (result != Error.Ok)
-			ShowStatus($"Could not host on port 7777 ({result}).", false);
+			ShowStatus($"Nie udało się otworzyć lobby (port {NetworkManager.Port}).", false);
 	}
 
 	private void JoinGame()
@@ -81,27 +86,39 @@ public partial class TitleScreen : Control
 		if (joinButton.Disabled)
 			return;
 
-		Error result = network.JoinServer(address.Text);
+		Error result = network.JoinServer(address.Text, nickname.Text);
 		if (result == Error.InvalidParameter)
 		{
-			ShowStatus("Enter the host PC’s IP address.", false);
+			ShowStatus("Podaj adres IP hosta.", false);
 			address.GrabFocus();
 		}
 		else if (result != Error.Ok)
-			ShowStatus($"Could not start the connection ({result}).", false);
+			ShowStatus("Nie udało się rozpocząć połączenia.", false);
 	}
 
-	private void ShowStatus(string message, bool busy)
+	private void ShowStatus(string message, bool isBusy)
 	{
-		hint.Text = message;
-		SetBusy(busy);
+		hint.Text = string.IsNullOrEmpty(message) ? "Podaj nick. Możesz zagrać solo lub utworzyć lobby LAN." : message;
+		busy = isBusy;
+		RefreshActions();
 	}
 
-	private void SetBusy(bool busy)
+	private void RefreshActions()
 	{
-		startButton.Disabled = busy;
-		hostButton.Disabled = busy;
-		joinButton.Disabled = busy;
-		address.Editable = !busy;
+		bool online = network.IsOnline;
+		bool canEnter = !busy && !online && NetworkManager.IsValidNickname(nickname.Text);
+		nickname.Editable = !busy && !online;
+		address.Editable = !busy && !online;
+		groupSize.Disabled = busy || online;
+		soloButton.Disabled = !canEnter;
+		hostButton.Disabled = !canEnter;
+		joinButton.Disabled = !canEnter || string.IsNullOrWhiteSpace(address.Text);
+		startButton.Disabled = busy || !network.CanStart;
+		leaveButton.Visible = online;
+		leaveButton.Disabled = busy && network.GroupSize > 0;
+		startButton.Visible = network.IsHosting;
+		soloButton.Visible = !online;
+		hostButton.GetParent<Control>().Visible = !online;
+		address.GetParent<Control>().Visible = !online;
 	}
 }

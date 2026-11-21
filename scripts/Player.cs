@@ -27,6 +27,7 @@ public partial class Player : CharacterBody3D
 	private float targetPitch;
 
 	public int PeerId { get; private set; } = NetworkManager.HostId;
+	public string Nickname { get; private set; } = "";
 	public bool IsLocalPlayer { get; private set; } = true;
 	public bool IsFlashlightOn => flashlight != null && flashlight.IsVisibleInTree();
 	public float HeadPitch => head.Rotation.X;
@@ -34,10 +35,11 @@ public partial class Player : CharacterBody3D
 	public bool IsRunning { get; private set; }
 	public bool HoldingFlashlight => holdingFlashlight;
 
-	public void ConfigurePeer(int id, bool isLocal, bool online)
+	public void ConfigurePeer(int id, bool isLocal, bool online, string nickname)
 	{
 		PeerId = id;
 		IsLocalPlayer = isLocal;
+		Nickname = nickname;
 		if (online)
 			CollisionLayer = 1 << 1;
 	}
@@ -84,6 +86,12 @@ public partial class Player : CharacterBody3D
 		else
 		{
 			GetNode<CanvasLayer>("HUD").Hide();
+			AddChild(new Label3D
+			{
+				Text = Nickname, Position = Vector3.Up * 2.05f,
+				Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, FontSize = 30, PixelSize = 0.0028f,
+				OutlineSize = 6, VisibilityRangeEnd = 8f
+			});
 			camera.QueueFree();
 			targetPosition = GlobalPosition;
 			targetYaw = Rotation.Y;
@@ -104,6 +112,13 @@ public partial class Player : CharacterBody3D
 		PanelContainer stowed = equip ? phoneSlot : flashlightSlot;
 		stowed.AddThemeStyleboxOverride("panel", normalSlotStyle);
 		selected.AddThemeStyleboxOverride("panel", SelectedSlotStyle);
+	}
+
+	internal void SetOpeningLocked(bool locked)
+	{
+		SetPhysicsProcess(!locked);
+		SetProcessUnhandledInput(!locked);
+		GetNode<CanvasLayer>("HUD").Visible = !locked;
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
