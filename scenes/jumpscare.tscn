@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Jumpscare.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="2_mimic"]
+
+[sub_resource type="Environment" id="Environment_scare"]
+background_mode = 1
+background_color = Color(0.014, 0.008, 0.009, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.48, 0.23, 0.2, 1)
+ambient_light_energy = 0.28
+
+[node name="Jumpscare" type="SubViewportContainer"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+stretch = true
+stretch_shrink = 2
+script = ExtResource("1_script")
+MimicModel = ExtResource("2_mimic")
+
+[node name="Stage" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(512, 288)
+render_target_update_mode = 0
+
+[node name="Environment" type="WorldEnvironment" parent="Stage"]
+environment = SubResource("Environment_scare")
+
+[node name="Camera" type="Camera3D" parent="Stage"]
+position = Vector3(0, 1.95, 2.2)
+current = true
+fov = 57.0
+near = 0.025
+
+[node name="FaceLight" type="OmniLight3D" parent="Stage"]
+position = Vector3(-0.21, 2.22, 0.78)
+light_color = Color(1, 0.65, 0.54, 1)
+light_energy = 1.45
+omni_range = 4.0
+omni_attenuation = 0.55
+
+[node name="Sting" type="AudioStreamPlayer" parent="."]
+volume_db = -8.0

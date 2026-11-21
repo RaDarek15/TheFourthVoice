@@ -51,6 +51,9 @@ size = Vector3(0.91, 2.04, 0.095)
 [sub_resource type="BoxShape3D" id="Box_workbench"]
 size = Vector3(1.5, 0.9, 0.65)
 
+[sub_resource type="BoxShape3D" id="Box_jump_starter"]
+size = Vector3(0.3, 0.28, 0.22)
+
 [sub_resource type="BoxShape3D" id="Box_bridge_deck"]
 size = Vector3(10.1, 0.12, 1.4)
 
@@ -177,9 +180,17 @@ shape = SubResource("Shape_porch_steps")
 [node name="Workbench" parent="ForesterHut" instance=ExtResource("15_bench")]
 position = Vector3(-1.14, 0.206, -1.887)
 
-[node name="JumpStarter" parent="ForesterHut/Workbench" instance=ExtResource("16_starter")]
+[node name="JumpStarter" type="StaticBody3D" parent="ForesterHut/Workbench"]
 position = Vector3(0.22, 0.9, 0.015)
 rotation = Vector3(0, -0.27, 0)
+collision_layer = 4
+collision_mask = 0
+
+[node name="Model" parent="ForesterHut/Workbench/JumpStarter" instance=ExtResource("16_starter")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ForesterHut/Workbench/JumpStarter"]
+position = Vector3(0, 0.11, 0)
+shape = SubResource("Box_jump_starter")
 
 [node name="WorkbenchCollision" type="CollisionShape3D" parent="ForesterHut"]
 position = Vector3(-1.14, 0.656, -1.887)

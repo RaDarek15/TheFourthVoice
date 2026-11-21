@@ -12,6 +12,7 @@ public partial class World : Node3D
 	[Export] public PackedScene TrailStoneModel;
 	[Export] public PackedScene ForestStoneModel;
 	[Export] public PackedScene[] FoliageModels = System.Array.Empty<PackedScene>();
+	[Export] public PackedScene BoundaryBushModel;
 
 	[Export] public int TreeCount = 150;
 	[Export] public float ForestSize = 90f;
@@ -63,6 +64,8 @@ public partial class World : Node3D
 	public Player LocalPlayer { get; private set; }
 	public Stalker Enemy { get; private set; }
 	public HutDoor Door { get; private set; }
+	public EscapeObjective Escape { get; private set; }
+	public bool GameplayStarted { get; private set; }
 	public IEnumerable<Player> Players => players.Values;
 	public Vector3 SpawnPosition => PlayerSpawn.GlobalPosition;
 	private float PlayerSpawnClearance => SpawnClearance + (network.IsOnline ? NetworkManager.SpawnSpacing : 0f);
@@ -90,11 +93,15 @@ public partial class World : Node3D
 		List<PlantingTile> forestFloor = GetPlantingTiles(forestOnly: true);
 		GenerateTrees(forestFloor);
 		GenerateGroundCover(forestFloor);
+		List<PlantingTile> ground = GetPlantingTiles(forestOnly: false, includeRoad: true);
+		AddBoundary(ground);
+		Escape = new EscapeObjective { Name = "EscapeObjective" };
+		AddChild(Escape);
+		GameplayStarted = IntroScene == null;
 		if (IntroScene != null)
 		{
 			intro = IntroScene.Instantiate<OpeningCutscene>();
 			AddChild(intro);
-			List<PlantingTile> ground = GetPlantingTiles(forestOnly: false, includeRoad: true);
 			intro.Prepare(this, point =>
 			{
 				Vector3 local = ToLocal(point);
@@ -184,6 +191,7 @@ public partial class World : Node3D
 
 	internal void FinishOpening()
 	{
+		GameplayStarted = true;
 		LocalPlayer.SetOpeningLocked(false);
 		if (!network.IsOnline || Multiplayer.IsServer())
 			Enemy?.SetPhysicsProcess(true);
@@ -194,7 +202,67 @@ public partial class World : Node3D
 	public void RemovePlayer(int id)
 	{
 		if (players.Remove(id, out Player player))
+		{
+			Escape?.PlayerLeft(player);
 			player.QueueFree();
+		}
+	}
+
+	private void AddBoundary(List<PlantingTile> ground)
+	{
+		if (ground.Count == 0)
+			return;
+
+		Aabb bounds = ground[0].Bounds;
+		foreach (PlantingTile tile in ground)
+			bounds = bounds.Merge(tile.Bounds);
+
+		var boundary = new Node3D { Name = "WorldBoundary" };
+		AddChild(boundary);
+		Mesh bush = CombineModel(BoundaryBushModel);
+		var batches = new Dictionary<(Mesh Mesh, Vector2I Cell), List<Transform3D>>();
+		var random = new RandomNumberGenerator { Seed = 7218 };
+		const float inset = 1.3f;
+		for (int side = 0; side < 4; side++)
+		{
+			bool alongX = side < 2;
+			Vector3 along = alongX ? Vector3.Right : Vector3.Back;
+			Vector3 across = alongX ? Vector3.Back : Vector3.Right;
+			float length = alongX ? bounds.Size.X : bounds.Size.Z;
+			float width = alongX ? bounds.Size.Z : bounds.Size.X;
+			float sign = side % 2 == 0 ? -1f : 1f;
+			Vector3 center = bounds.GetCenter() + across * sign * (width / 2f - inset);
+			float height = bounds.Size.Y + 12f;
+			var wall = new StaticBody3D { Position = center };
+			wall.AddChild(new CollisionShape3D
+			{
+				Shape = new BoxShape3D
+				{
+					Size = alongX ? new Vector3(length, height, 0.8f) : new Vector3(0.8f, height, length)
+				}
+			});
+			boundary.AddChild(wall);
+			if (bush == null)
+				continue;
+
+			for (float distance = -length / 2f + 0.8f; distance < length / 2f; distance += 1.45f)
+			{
+				Vector3 position = center + along * distance - across * sign * random.RandfRange(0.05f, 0.8f);
+				if (!TryGetPlantingPosition(ground, ref position))
+					continue;
+				position.Y -= 0.28f;
+				Basis basis = new Basis(Vector3.Up, random.RandfRange(0f, Mathf.Tau))
+					.Scaled(Vector3.One * random.RandfRange(2.6f, 3.4f));
+				var key = (bush, GetCell(position));
+				if (!batches.TryGetValue(key, out var transforms))
+				{
+					transforms = new List<Transform3D>();
+					batches.Add(key, transforms);
+				}
+				transforms.Add(new Transform3D(basis, position));
+			}
+		}
+		AddGroundCoverBatches("BoundaryBushes", batches);
 	}
 
 	private void AddBatch(string name, Mesh mesh)

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dqn1iplendh82"]
 
 [ext_resource type="Script" uid="uid://cybx5cm86kpaa" path="res://scripts/TitleScreen.cs" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://y4iykidshdpe" path="res://assets/title-forest.png" id="2_backdrop"]
+[ext_resource type="Texture2D" path="res://assets/fourth-voice-forest.png" id="2_backdrop"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
 offsets = PackedFloat32Array(0, 0.42, 0.82)
@@ -143,7 +143,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 0.93, 0.86, 1)
 theme_override_fonts/font = SubResource("FontVariation_title")
 theme_override_font_sizes/font_size = 100
-text = "MIMIC"
+text = "THE FOURTH\nVOICE"
 
 [node name="Hint" type="Label" parent="Content/Heading" unique_id=2011548039]
 unique_name_in_owner = true

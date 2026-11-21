@@ -4,9 +4,12 @@ public partial class Stalker : CharacterBody3D
 {
 	[Export] public Node3D Terrain;
 	[Export] public float WalkSpeed = 2.35f;
-	[Export] public float StandoffDistance = 6f;
+	[Export] public float RunSpeed = 5.6f;
 
 	private const float DetectionRange = 50f;
+	private const float AttackRange = 1.35f;
+	private const float CloseDetectionRange = 7f;
+	private const float HuntStopDistance = 0.6f;
 	private const float WhistleAccuracy = 10f;
 	private const float InvestigationArrivalDistance = 1f;
 	private const int SpawnDirections = 16;
@@ -14,22 +17,31 @@ public partial class Stalker : CharacterBody3D
 	private static readonly float[] AvoidanceAngles = { 30f, 60f, 90f, 120f };
 
 	private AnimationPlayer animationPlayer;
+	private AudioStreamPlayer3D whistle;
+	private NetworkManager network;
 	private World world;
 	private bool remoteReplica;
 	private Vector3 remotePosition;
 	private float remoteYaw;
 	private Vector3? whistleTarget;
 	private float investigationTime;
+	private float lureTimer;
+	private float burstTime;
+	private float burstCooldown;
 	private bool placed;
 	private int avoidanceSide = 1;
 
 	public bool IsPlaced => placed;
 	public bool IsWalking { get; private set; }
+	public bool IsRunning { get; private set; }
 
 	public override void _Ready()
 	{
 		world = GetParent() as World;
-		remoteReplica = GetNode<NetworkManager>("/root/NetworkManager").IsOnline && !Multiplayer.IsServer();
+		network = GetNode<NetworkManager>("/root/NetworkManager");
+		remoteReplica = network.IsOnline && !Multiplayer.IsServer();
+		whistle = GetNode<AudioStreamPlayer3D>("LureWhistle");
+		lureTimer = 8f + GD.Randf() * 5f;
 		if (remoteReplica)
 			CollisionLayer = 0;
 		Hide();
@@ -52,6 +64,14 @@ public partial class Stalker : CharacterBody3D
 			return;
 		}
 
+		if (world.Escape != null && world.Escape.Outcome != EscapeOutcome.InProgress)
+		{
+			Velocity = Vector3.Zero;
+			IsWalking = IsRunning = false;
+			PlayAnimation("Idle");
+			return;
+		}
+
 		if (!placed)
 		{
 			if (!TryPlace())
@@ -65,11 +85,32 @@ public partial class Stalker : CharacterBody3D
 		}
 
 		float step = (float)delta;
+		Player victim = FindNearbyPlayer(AttackRange);
+		if (victim != null)
+		{
+			PlayAnimation("Lunge");
+			world.Escape?.Catch(victim);
+			return;
+		}
+		lureTimer -= step;
+		if (lureTimer <= 0f && FindNearbyPlayer(5f) == null)
+		{
+			PlayWhistle(GlobalPosition);
+			network.BroadcastMimicWhistle(GlobalPosition);
+			lureTimer = 14f + GD.Randf() * 9f;
+		}
+		burstTime = Mathf.Max(0f, burstTime - step);
+		burstCooldown = Mathf.Max(0f, burstCooldown - step);
 		Vector3 direction = Vector3.Zero;
 		if (TryChooseTarget(step, out Vector3 bearing, out float distance, out float stopDistance))
 		{
 			if (distance > stopDistance)
 				direction = Steer(bearing);
+			if (stopDistance == HuntStopDistance && distance < 16f && burstCooldown <= 0f)
+			{
+				burstTime = 2.6f;
+				burstCooldown = 9f;
+			}
 
 			Vector3 facing = direction.IsZeroApprox() ? bearing : direction;
 			Vector3 rotation = GlobalRotation;
@@ -79,11 +120,18 @@ public partial class Stalker : CharacterBody3D
 		}
 
 		float verticalSpeed = IsOnFloor() ? 0f : Velocity.Y + GetGravity().Y * step;
-		Velocity = direction * WalkSpeed + Vector3.Up * verticalSpeed;
+		Velocity = direction * (burstTime > 0f ? RunSpeed : WalkSpeed) + Vector3.Up * verticalSpeed;
 		MoveAndSlide();
 		Vector3 movement = GetRealVelocity();
 		IsWalking = IsOnFloor() && new Vector2(movement.X, movement.Z).LengthSquared() > 0.04f;
-		PlayAnimation(IsWalking ? "Walk" : "Idle");
+		IsRunning = IsWalking && burstTime > 0f;
+		PlayAnimation(IsRunning ? "Run" : IsWalking ? "Walk" : "Idle");
+	}
+
+	public void PlayWhistle(Vector3 origin)
+	{
+		whistle.GlobalPosition = origin + Vector3.Up * 1.7f;
+		whistle.Play();
 	}
 
 	public void InvestigateWhistle(Vector3 origin)
@@ -101,6 +149,17 @@ public partial class Stalker : CharacterBody3D
 
 	private bool TryChooseTarget(float delta, out Vector3 bearing, out float distance, out float stopDistance)
 	{
+		Player nearby = FindNearbyPlayer(CloseDetectionRange);
+		if (nearby != null)
+		{
+			stopDistance = HuntStopDistance;
+			Vector3 offset = nearby.GlobalPosition - GlobalPosition;
+			offset.Y = 0f;
+			distance = offset.Length();
+			bearing = offset.Normalized();
+			return true;
+		}
+
 		if (whistleTarget is Vector3 point)
 		{
 			Vector3 offset = point - GlobalPosition;
@@ -116,11 +175,11 @@ public partial class Stalker : CharacterBody3D
 			whistleTarget = null;
 		}
 
-		stopDistance = StandoffDistance;
+		stopDistance = HuntStopDistance;
 		return TryDetectPlayer(out bearing, out distance);
 	}
 
-	public void ApplyPose(Vector3 position, float yaw, bool walking)
+	public void ApplyPose(Vector3 position, float yaw, bool walking, bool running)
 	{
 		remotePosition = position;
 		remoteYaw = yaw;
@@ -132,7 +191,8 @@ public partial class Stalker : CharacterBody3D
 			Show();
 		}
 		IsWalking = walking;
-		PlayAnimation(walking ? "Walk" : "Idle");
+		IsRunning = running;
+		PlayAnimation(running ? "Run" : walking ? "Walk" : "Idle");
 	}
 
 	private bool TryPlace()
@@ -176,7 +236,7 @@ public partial class Stalker : CharacterBody3D
 		Vector3 targetOffset = Vector3.Zero;
 		foreach (Player player in world.Players)
 		{
-			if (!player.IsFlashlightOn)
+			if (player.State != SurvivorState.OnFoot || !player.IsFlashlightOn)
 				continue;
 
 			Vector3 offset = player.GlobalPosition - GlobalPosition;
@@ -194,6 +254,34 @@ public partial class Stalker : CharacterBody3D
 			return false;
 		bearing = targetOffset / distance;
 		return true;
+	}
+
+	private Player FindNearbyPlayer(float range)
+	{
+		Player nearest = null;
+		float best = range * range;
+		foreach (Player player in world.Players)
+		{
+			if (player.State != SurvivorState.OnFoot)
+				continue;
+
+			Vector3 offset = player.GlobalPosition - GlobalPosition;
+			float distance = offset.X * offset.X + offset.Z * offset.Z;
+			if (distance >= best || Mathf.Abs(offset.Y) > 1.45f)
+				continue;
+
+			using var ray = PhysicsRayQueryParameters3D.Create(
+				GlobalPosition + Vector3.Up * 1.05f,
+				player.GlobalPosition + Vector3.Up * 1.05f, CollisionMask);
+			ray.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+			var hit = GetWorld3D().DirectSpaceState.IntersectRay(ray);
+			if (hit.Count != 0 && hit["collider"].AsGodotObject() != player)
+				continue;
+
+			best = distance;
+			nearest = player;
+		}
+		return nearest;
 	}
 
 	private Vector3 Steer(Vector3 bearing)

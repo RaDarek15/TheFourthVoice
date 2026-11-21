@@ -1,15 +1,15 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dcbyj4vpl2ed6"]
 
-[ext_resource type="Script" path="res://scripts/OpeningCutscene.cs" id="1_intro"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/car.glb" id="2_car"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/player.glb" id="3_cast"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/mimic.glb" id="5_shape"]
-[ext_resource type="PackedScene" path="res://assets/3d-models/phone.glb" id="6_phone"]
-[ext_resource type="AudioStream" path="res://assets/audio/intro/car.wav" id="7_engine"]
-[ext_resource type="AudioStream" path="res://assets/audio/intro/woods.wav" id="8_woods"]
-[ext_resource type="AudioStream" path="res://assets/audio/intro/footstep.wav" id="9_step"]
-[ext_resource type="AudioStream" path="res://assets/audio/intro/call_failed.wav" id="10_call"]
-[ext_resource type="AudioStream" path="res://assets/sounds/whistle.mp3" id="11_whistle"]
+[ext_resource type="Script" uid="uid://dbm0rxtpn378t" path="res://scripts/OpeningCutscene.cs" id="1_intro"]
+[ext_resource type="PackedScene" uid="uid://ds0fm1xy3djc" path="res://assets/3d-models/car.glb" id="2_car"]
+[ext_resource type="PackedScene" uid="uid://b56rj450qg07s" path="res://assets/3d-models/player.glb" id="3_cast"]
+[ext_resource type="PackedScene" uid="uid://bqsm7icyx3v0c" path="res://assets/3d-models/mimic.glb" id="5_shape"]
+[ext_resource type="PackedScene" uid="uid://c8o3qa2gb4l2e" path="res://assets/3d-models/phone.glb" id="6_phone"]
+[ext_resource type="AudioStream" uid="uid://cuy2ayk6d2sxg" path="res://assets/audio/intro/car.wav" id="7_engine"]
+[ext_resource type="AudioStream" uid="uid://c2i12gaytlb56" path="res://assets/audio/intro/woods.wav" id="8_woods"]
+[ext_resource type="AudioStream" uid="uid://bh88yhsnvfcae" path="res://assets/audio/intro/footstep.wav" id="9_step"]
+[ext_resource type="AudioStream" uid="uid://r5aoifl1bkhq" path="res://assets/audio/intro/call_failed.wav" id="10_call"]
+[ext_resource type="AudioStream" uid="uid://pw4k4hwhrexr" path="res://assets/sounds/whistle.mp3" id="11_whistle"]
 
 [sub_resource type="Environment" id="Environment_intro"]
 background_mode = 1
@@ -38,6 +38,9 @@ void fragment() {
 [sub_resource type="ShaderMaterial" id="Material_vignette"]
 shader = SubResource("Shader_vignette")
 
+[sub_resource type="SystemFont" id="SystemFont_clock"]
+font_names = PackedStringArray("Menlo", "Consolas", "DejaVu Sans Mono")
+
 [sub_resource type="SystemFont" id="SystemFont_title"]
 font_names = PackedStringArray("Georgia", "Liberation Serif", "DejaVu Serif")
 font_weight = 700
@@ -46,82 +49,84 @@ font_weight = 700
 base_font = SubResource("SystemFont_title")
 spacing_glyph = 12
 
-[sub_resource type="SystemFont" id="SystemFont_clock"]
-font_names = PackedStringArray("Menlo", "Consolas", "DejaVu Sans Mono")
-
-[node name="Intro" type="Node3D"]
+[node name="Intro" type="Node3D" unique_id=1391818827]
 script = ExtResource("1_intro")
 CarModel = ExtResource("2_car")
 CastModel = ExtResource("3_cast")
 SilhouetteModel = ExtResource("5_shape")
 PhoneModel = ExtResource("6_phone")
 
-[node name="Camera" type="Camera3D" parent="."]
+[node name="Camera" type="Camera3D" parent="." unique_id=872404058]
 environment = SubResource("Environment_intro")
 near = 0.035
 far = 115.0
 
-[node name="Moon" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-28, -58, 0)
+[node name="Moon" type="DirectionalLight3D" parent="." unique_id=138957683]
+transform = Transform3D(0.52991927, 0.39813447, -0.748782, 0, 0.88294756, 0.46947157, 0.8480481, -0.24878204, 0.46789092, 0, 0, 0)
 light_color = Color(0.51, 0.66, 0.8, 1)
 light_energy = 0.115
 light_specular = 0.3
 
-[node name="Woods" type="AudioStreamPlayer" parent="."]
+[node name="Woods" type="AudioStreamPlayer" parent="." unique_id=411838216]
 stream = ExtResource("8_woods")
 volume_db = -22.0
 
-[node name="CarSound" type="AudioStreamPlayer" parent="."]
+[node name="CarSound" type="AudioStreamPlayer" parent="." unique_id=1188792713]
 stream = ExtResource("7_engine")
-volume_db = 0.0
 
-[node name="Footstep" type="AudioStreamPlayer" parent="."]
+[node name="Footstep" type="AudioStreamPlayer" parent="." unique_id=1865620111]
 stream = ExtResource("9_step")
 volume_db = -13.0
 
-[node name="CallFailed" type="AudioStreamPlayer" parent="."]
+[node name="CallFailed" type="AudioStreamPlayer" parent="." unique_id=47484768]
 stream = ExtResource("10_call")
 volume_db = -8.0
 
-[node name="Whistle" type="AudioStreamPlayer3D" parent="."]
+[node name="Whistle" type="AudioStreamPlayer3D" parent="." unique_id=1093924438]
 stream = ExtResource("11_whistle")
-unit_size = 6.5
 volume_db = -3.0
+unit_size = 6.5
 max_distance = 26.0
 
-[node name="Overlay" type="CanvasLayer" parent="."]
+[node name="Overlay" type="CanvasLayer" parent="." unique_id=428577845]
 layer = 12
 
-[node name="Vignette" type="ColorRect" parent="Overlay"]
+[node name="Vignette" type="ColorRect" parent="Overlay" unique_id=1765020927]
 material = SubResource("Material_vignette")
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="Matte" type="Control" parent="Overlay"]
+[node name="Matte" type="Control" parent="Overlay" unique_id=1108517449]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="Top" type="ColorRect" parent="Overlay/Matte"]
+[node name="Top" type="ColorRect" parent="Overlay/Matte" unique_id=1805754449]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 0.085
 mouse_filter = 2
 color = Color(0.009, 0.014, 0.017, 1)
 
-[node name="Bottom" type="ColorRect" parent="Overlay/Matte"]
+[node name="Bottom" type="ColorRect" parent="Overlay/Matte" unique_id=62839848]
+layout_mode = 0
 anchor_top = 0.889
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0.009, 0.014, 0.017, 1)
 
-[node name="Clock" type="Label" parent="Overlay"]
+[node name="Clock" type="Label" parent="Overlay" unique_id=1118869371]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = -1
 anchor_left = 0.068
 anchor_top = 0.127
 anchor_right = 0.068
 anchor_bottom = 0.127
-modulate = Color(1, 1, 1, 0)
 theme_override_colors/font_color = Color(0.82, 0.88, 0.83, 1)
 theme_override_colors/font_outline_color = Color(0.015, 0.02, 0.018, 0.95)
 theme_override_constants/outline_size = 4
@@ -129,7 +134,8 @@ theme_override_fonts/font = SubResource("SystemFont_clock")
 theme_override_font_sizes/font_size = 24
 text = "23:58"
 
-[node name="Caption" type="Label" parent="Overlay"]
+[node name="Caption" type="Label" parent="Overlay" unique_id=1745175992]
+anchors_preset = -1
 anchor_left = 0.07
 anchor_top = 0.896
 anchor_right = 0.93
@@ -142,37 +148,42 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Blackout" type="ColorRect" parent="Overlay"]
+[node name="Blackout" type="ColorRect" parent="Overlay" unique_id=2063896275]
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0.008, 0.014, 0.019, 1)
 
-[node name="Title" type="Label" parent="Overlay"]
+[node name="Title" type="Label" parent="Overlay" unique_id=530551363]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = -1
 anchor_top = 0.34
 anchor_right = 1.0
 anchor_bottom = 0.66
-modulate = Color(1, 1, 1, 0)
 theme_override_colors/font_color = Color(0.89, 0.91, 0.83, 1)
 theme_override_fonts/font = SubResource("FontVariation_title")
 theme_override_font_sizes/font_size = 128
-text = "MIMIC"
+text = "THE FOURTH 
+	VOICE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Skip" type="Label" parent="Overlay"]
+[node name="Skip" type="Label" parent="Overlay" unique_id=663883280]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = -1
 anchor_left = 0.65
 anchor_right = 0.967
 anchor_bottom = 0.083
-modulate = Color(1, 1, 1, 0)
 theme_override_colors/font_color = Color(0.72, 0.77, 0.73, 1)
 theme_override_font_sizes/font_size = 14
 text = "Esc  ·  Pomiń"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Waiting" type="Label" parent="Overlay"]
+[node name="Waiting" type="Label" parent="Overlay" unique_id=536790981]
 visible = false
+anchors_preset = -1
 anchor_top = 0.47
 anchor_right = 1.0
 anchor_bottom = 0.53

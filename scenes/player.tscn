@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://c66ewmn7uvoo0" path="res://assets/3d-models/flashlight.glb" id="4_flashlight"]
 [ext_resource type="AudioStream" uid="uid://c18tpan3vfgq3" path="res://assets/sounds/playerWalk.mp3" id="5_footsteps"]
 [ext_resource type="AudioStream" uid="uid://pw4k4hwhrexr" path="res://assets/sounds/whistle.mp3" id="6_whistle"]
+[ext_resource type="PackedScene" path="res://scenes/escape_hud.tscn" id="7_escape_hud"]
 
 [sub_resource type="StyleBoxFlat" id="Style_selected"]
 content_margin_left = 13.0
@@ -83,6 +84,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.15)
 near = 0.08
 
 [node name="InteractionRay" type="RayCast3D" parent="Head/Camera3D" unique_id=701773934]
+collision_mask = 5
 target_position = Vector3(0, 0, -2.4)
 
 [node name="Flashlight" type="SpotLight3D" parent="Head" unique_id=423311576]
@@ -181,6 +183,16 @@ theme_override_font_sizes/font_size = 14
 text = "Esc   Menu"
 horizontal_alignment = 2
 vertical_alignment = 1
+
+[node name="JumpStarterItem" type="Label" parent="HUD/Hotbar"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.88, 0.67, 1)
+theme_override_colors/font_outline_color = Color(0.025, 0.032, 0.029, 1)
+theme_override_constants/outline_size = 4
+text = "Jump starter"
+
+[node name="EscapeHUD" parent="HUD" instance=ExtResource("7_escape_hud")]
 
 [node name="GameMenu" type="ColorRect" parent="HUD" unique_id=2052126261]
 visible = false

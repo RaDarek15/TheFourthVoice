@@ -224,18 +224,21 @@ public partial class NetworkManager : Node
 
 				foreach (Player player in world.Players)
 				{
-					if (player.PeerId != recipient)
+					if (player.PeerId != recipient && player.State == SurvivorState.OnFoot)
 						SendPlayer(recipient, MethodName.SyncPlayer, player);
 				}
 
 				Stalker stalker = world.Enemy;
 				if (IsInstanceValid(stalker) && stalker.IsPlaced)
-					RpcId(recipient, MethodName.SyncStalker, stalker.GlobalPosition, stalker.Rotation.Y, stalker.IsWalking);
+					RpcId(recipient, MethodName.SyncStalker, stalker.GlobalPosition, stalker.Rotation.Y, stalker.IsWalking, stalker.IsRunning);
 				if (IsInstanceValid(world.Door))
 					RpcId(recipient, MethodName.SyncDoor, world.Door.Rotation.Y, world.Door.IsOpen);
+				EscapeObjective escape = world.Escape;
+				if (IsInstanceValid(escape) && escape.IsAvailable)
+					RpcId(recipient, MethodName.SyncEscape, escape.CarrierId, escape.RepairerId, escape.RepairTime, escape.Repaired, escape.StarterPosition);
 			}
 		}
-		else if (IsInstanceValid(world.LocalPlayer))
+		else if (IsInstanceValid(world.LocalPlayer) && world.LocalPlayer.State == SurvivorState.OnFoot)
 		{
 			Player player = world.LocalPlayer;
 			RpcId(HostId, MethodName.SubmitPlayer, player.GlobalPosition, player.Rotation.Y,
@@ -460,24 +463,76 @@ public partial class NetworkManager : Node
 	private void SubmitPlayer(Vector3 position, float yaw, float pitch, bool equipped, bool flashlight, bool walking, bool running)
 	{
 		int id = Multiplayer.GetRemoteSenderId();
-		if (isHost && playerSlots.ContainsKey(id) && position.IsFinite() && float.IsFinite(yaw) && float.IsFinite(pitch))
-			world?.GetPlayer(id)?.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running);
+		Player player = world?.GetPlayer(id);
+		if (isHost && playerSlots.ContainsKey(id) && player?.State == SurvivorState.OnFoot &&
+			position.IsFinite() && float.IsFinite(yaw) && float.IsFinite(pitch))
+			player.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void SyncPlayer(int id, Vector3 position, float yaw, float pitch, bool equipped, bool flashlight, bool walking, bool running)
 	{
 		Player player = world?.GetPlayer(id);
-		if (player != null && !player.IsLocalPlayer)
+		if (player != null && !player.IsLocalPlayer && player.State == SurvivorState.OnFoot)
 			player.ApplyPose(position, yaw, pitch, equipped, flashlight, walking, running);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SyncStalker(Vector3 position, float yaw, bool walking) => world?.Enemy?.ApplyPose(position, yaw, walking);
+	private void SyncStalker(Vector3 position, float yaw, bool walking, bool running)
+	{
+		if (IsInstanceValid(world?.Enemy))
+			world.Enemy.ApplyPose(position, yaw, walking, running);
+	}
+
+	internal void SendEscapeAction(EscapeAction action) => RpcId(HostId, MethodName.ReceiveEscapeAction, (int)action);
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void ReceiveEscapeAction(int action)
+	{
+		int id = Multiplayer.GetRemoteSenderId();
+		if (isHost && matchStarted && playerSlots.ContainsKey(id) && System.Enum.IsDefined((EscapeAction)action))
+			world?.Escape?.ApplyAction(world.GetPlayer(id), (EscapeAction)action);
+	}
+
+	internal void PublishSurvivor(Player player, SurvivorState state, int seat, Vector3 position, float yaw)
+	{
+		if (isHost && matchStarted)
+			Rpc(MethodName.SyncSurvivor, player.PeerId, (int)state, seat, position, yaw);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void SyncSurvivor(int id, int state, int seat, Vector3 position, float yaw)
+		=> world?.GetPlayer(id)?.SetSurvivorState((SurvivorState)state, seat, position, yaw);
+
+	internal void PublishOutcome(EscapeOutcome outcome)
+	{
+		if (isHost && matchStarted)
+			Rpc(MethodName.SyncOutcome, (int)outcome);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void SyncOutcome(int outcome) => world?.Escape?.ApplyOutcome((EscapeOutcome)outcome);
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
+	private void SyncEscape(int carrier, int repairer, float seconds, bool repaired, Vector3 starterPosition)
+		=> world?.Escape?.SyncProgress(carrier, repairer, seconds, repaired, starterPosition);
+
+	internal void BroadcastMimicWhistle(Vector3 origin)
+	{
+		if (isHost && matchStarted)
+			Rpc(MethodName.HearMimicWhistle, origin);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void HearMimicWhistle(Vector3 origin)
+	{
+		if (IsInstanceValid(world?.Enemy))
+			world.Enemy.PlayWhistle(origin);
+	}
 
 	public void Whistle(Player player)
 	{
-		if (!player.TryStartWhistle())
+		if (player.State != SurvivorState.OnFoot || !player.TryStartWhistle())
 			return;
 
 		Vector3 origin = player.GlobalPosition;
@@ -513,7 +568,7 @@ public partial class NetworkManager : Node
 			return;
 
 		Player player = world?.GetPlayer(id);
-		if (!IsInstanceValid(player) || !player.TryStartWhistle())
+		if (!IsInstanceValid(player) || player.State != SurvivorState.OnFoot || !player.TryStartWhistle())
 			return;
 
 		// The reliable whistle can arrive ahead of the latest movement snapshot.

@@ -121,6 +121,7 @@ Terrain = NodePath("Ground")
 TrailStoneModel = ExtResource("10_trail_stone")
 ForestStoneModel = ExtResource("11_forest_stone")
 FoliageModels = Array[PackedScene]([ExtResource("12_bush_a"), ExtResource("13_bush_b")])
+BoundaryBushModel = ExtResource("13_bush_b")
 TreeCount = 2000
 ForestSize = 200.0
 

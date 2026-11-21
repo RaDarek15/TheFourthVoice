@@ -50,7 +50,7 @@ public partial class TitleScreen : Control
 
 	private void FitTitle()
 	{
-		int fontSize = Mathf.RoundToInt(Mathf.Clamp(Size.X * 0.085f, 48f, 116f));
+		int fontSize = Mathf.RoundToInt(Mathf.Clamp(Mathf.Min(Size.X * 0.064f, Size.Y * 0.12f), 32f, 94f));
 		title.AddThemeFontSizeOverride("font_size", fontSize);
 	}
 

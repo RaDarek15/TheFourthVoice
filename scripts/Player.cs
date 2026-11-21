@@ -12,6 +12,8 @@ public partial class Player : CharacterBody3D
 	private AnimationPlayer animator;
 	private SpotLight3D flashlight;
 	private Node3D head;
+	private Camera3D camera;
+	private Vector3 cameraRestPosition;
 	private Node3D phoneItem;
 	private Node3D flashlightItem;
 	private StyleBox normalSlotStyle;
@@ -24,6 +26,15 @@ public partial class Player : CharacterBody3D
 	private ulong nextWhistleTime;
 	private Control gameMenu;
 	private Button resumeButton;
+	private World world;
+	private EscapeHud escapeHud;
+	private Control hotbar;
+	private Label starterSlot;
+	private Label3D nameplate;
+	private bool repairHeld;
+	private uint footCollisionLayer;
+	private uint footCollisionMask;
+	private EscapeOutcome escapeResult;
 	private bool flashlightPowered = true;
 	private bool holdingFlashlight;
 	private bool interactionRequested;
@@ -39,6 +50,9 @@ public partial class Player : CharacterBody3D
 	public bool IsWalking { get; private set; }
 	public bool IsRunning { get; private set; }
 	public bool HoldingFlashlight => holdingFlashlight;
+	public SurvivorState State { get; private set; }
+	public int SeatIndex { get; private set; } = -1;
+	public float ViewHeight => head.Position.Y;
 
 	public void ConfigurePeer(int id, bool isLocal, bool online, string nickname)
 	{
@@ -51,6 +65,9 @@ public partial class Player : CharacterBody3D
 
 	public override void _Ready()
 	{
+		world = GetParent() as World ?? GetParent().GetParent() as World;
+		footCollisionLayer = CollisionLayer;
+		footCollisionMask = CollisionMask;
 		footsteps = GetNode<AudioStreamPlayer3D>("Footsteps");
 		if (footsteps.Stream is AudioStreamMP3 walkingClip)
 			walkingClip.Loop = true;
@@ -70,6 +87,8 @@ public partial class Player : CharacterBody3D
 		animator.Play("Idle");
 
 		var skeleton = GetNode<Skeleton3D>("Model/Player/Skeleton3D");
+		if (IsLocalPlayer)
+			FirstPersonBody.KeepLimbs(skeleton);
 		var grip = skeleton.GetNode<Node3D>("Hand_R/FlashlightSocket");
 		skeleton.AddChild(new HeldItemPose { Head = head, GripToWrist = grip.Transform.AffineInverse() });
 
@@ -85,10 +104,17 @@ public partial class Player : CharacterBody3D
 		flashlight.Reparent(lens, keepGlobalTransform: false);
 
 		EquipFlashlight(true);
-		Camera3D camera = GetNode<Camera3D>("Head/Camera3D");
+		camera = GetNode<Camera3D>("Head/Camera3D");
+		cameraRestPosition = camera.Position;
 		SetProcessUnhandledInput(IsLocalPlayer);
 		if (IsLocalPlayer)
 		{
+			escapeHud = GetNode<EscapeHud>("HUD/EscapeHUD");
+			hotbar = GetNode<Control>("HUD/Hotbar");
+			starterSlot = hotbar.GetNode<Label>("JumpStarterItem");
+			escapeHud.ExitButton.Pressed += () => world?.Escape?.Interact(this, EscapeAction.Exit);
+			escapeHud.DepartButton.Pressed += () => world?.Escape?.Interact(this, EscapeAction.Depart);
+			escapeHud.MainMenuButton.Pressed += ReturnToMainMenu;
 			gameMenu = GetNode<Control>("HUD/GameMenu");
 			resumeButton = gameMenu.GetNode<Button>("Center/Panel/Actions/Resume");
 			resumeButton.Pressed += () => SetGameMenuOpen(false);
@@ -99,12 +125,13 @@ public partial class Player : CharacterBody3D
 		else
 		{
 			GetNode<CanvasLayer>("HUD").Hide();
-			AddChild(new Label3D
+			nameplate = new Label3D
 			{
 				Text = Nickname, Position = Vector3.Up * 2.05f,
 				Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, FontSize = 30, PixelSize = 0.0028f,
 				OutlineSize = 6, VisibilityRangeEnd = 8f
-			});
+			};
+			AddChild(nameplate);
 			camera.QueueFree();
 			targetPosition = GlobalPosition;
 			targetYaw = Rotation.Y;
@@ -151,6 +178,9 @@ public partial class Player : CharacterBody3D
 			}
 		}
 
+		if (State != SurvivorState.OnFoot || escapeResult != EscapeOutcome.InProgress)
+			return;
+
 		if (@event.IsActionPressed("ui_cancel") ||
 			(!gameMenu.Visible && InputMap.HasAction("toggle_main_menu") && @event.IsActionPressed("toggle_main_menu")))
 		{
@@ -194,6 +224,9 @@ public partial class Player : CharacterBody3D
 			Vector3 rotation = head.Rotation;
 			rotation.X = Mathf.Clamp(rotation.X, Mathf.DegToRad(-89), Mathf.DegToRad(89));
 			head.Rotation = rotation;
+			// Lean forward when looking down so the camera stays in front of the waistband.
+			float lean = Mathf.SmoothStep(Mathf.DegToRad(50f), Mathf.DegToRad(84f), -rotation.X);
+			camera.Position = cameraRestPosition + Vector3.Up * (0.44f * lean);
 		}
 
 		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
@@ -202,6 +235,15 @@ public partial class Player : CharacterBody3D
 
 	public override void _PhysicsProcess(double delta)
 	{
+		EscapeObjective escape = world?.Escape;
+		if (IsLocalPlayer)
+		{
+			escapeHud.Update(this, escape, gameMenu.Visible, escapeResult);
+			starterSlot.Visible = escape?.CarrierId == PeerId;
+		}
+		if (State != SurvivorState.OnFoot || escapeResult != EscapeOutcome.InProgress)
+			return;
+
 		if (!IsLocalPlayer)
 		{
 			float weight = 1f - Mathf.Exp(-22f * (float)delta);
@@ -210,7 +252,7 @@ public partial class Player : CharacterBody3D
 			head.Rotation = new Vector3(Mathf.Lerp(HeadPitch, targetPitch, weight), 0f, 0f);
 			return;
 		}
-		Vector2 input = gameMenu.Visible ? Vector2.Zero : Input.GetVector(
+		Vector2 input = gameMenu.Visible || repairHeld ? Vector2.Zero : Input.GetVector(
 			"move_left",
 			"move_right",
 			"move_forward",
@@ -239,21 +281,91 @@ public partial class Player : CharacterBody3D
 
 		if (interactionRequested)
 			interactionRay.ForceRaycastUpdate();
-		HutDoor door = gameMenu.Visible ? null : interactionRay.GetCollider() as HutDoor;
-		interactionHint.Visible = door != null;
+		GodotObject target = gameMenu.Visible ? null : interactionRay.GetCollider();
+		HutDoor door = target as HutDoor;
+		EscapeAction? action = escape?.ActionFor(this, target);
+		if (repairHeld && (!Input.IsActionPressed("interact") ||
+			(action != EscapeAction.StartRepair && escape?.RepairerId != PeerId)))
+			StopRepair();
+
+		string hint = escape?.HintFor(this, target) ?? "";
 		if (door != null)
 		{
 			if (interactionRequested)
 				GetNode<NetworkManager>("/root/NetworkManager").ToggleDoor(door);
-			interactionHint.Text = door.InteractionHint;
+			hint = door.InteractionHint;
 		}
+		else if (interactionRequested && action is EscapeAction use)
+		{
+			repairHeld = use == EscapeAction.StartRepair;
+			escape.Interact(this, use);
+		}
+		if (escape?.RepairerId == PeerId && !gameMenu.Visible)
+			hint = $"Repairing · {Mathf.CeilToInt(EscapeObjective.RepairSeconds - escape.RepairTime)} s";
+		interactionHint.Text = hint;
+		interactionHint.Visible = hint.Length != 0;
 		interactionRequested = false;
+	}
+
+	private void StopRepair()
+	{
+		if (!repairHeld)
+			return;
+		repairHeld = false;
+		world?.Escape?.Interact(this, EscapeAction.CancelRepair);
+	}
+
+	public void SetSurvivorState(SurvivorState state, int seat, Vector3 position, float yaw)
+	{
+		if (State == state)
+			return;
+		State = state;
+		SeatIndex = seat;
+		repairHeld = false;
+		interactionRequested = false;
+		Velocity = Vector3.Zero;
+		targetPosition = GlobalPosition = position;
+		targetYaw = yaw;
+		targetPitch = 0f;
+		Rotation = new Vector3(0f, yaw, 0f);
+		head.Rotation = Vector3.Zero;
+		bool onFoot = state == SurvivorState.OnFoot;
+		GetNode<Node3D>("Model").Visible = onFoot;
+		GetNode<OmniLight3D>("Head/OmniLight3D").Visible = onFoot;
+		CollisionLayer = onFoot ? footCollisionLayer : 0;
+		CollisionMask = onFoot ? footCollisionMask : 0;
+		IsWalking = IsRunning = false;
+		UpdateAnimation();
+		UpdateFootsteps();
+		if (!IsLocalPlayer)
+		{
+			nameplate.Visible = onFoot;
+			return;
+		}
+
+		gameMenu.Hide();
+		interactionHint.Hide();
+		camera.Position = cameraRestPosition;
+		hotbar.Visible = onFoot;
+		GetNode<Control>("HUD/Reticle").Visible = onFoot;
+		Input.MouseMode = onFoot ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
+		if (state == SurvivorState.Dead)
+			escapeHud.Scare();
+		escapeHud.Update(this, world?.Escape, false, escapeResult);
+	}
+
+	public void ShowEscapeResult(EscapeOutcome outcome)
+	{
+		escapeResult = outcome;
+		gameMenu.Hide();
 	}
 
 	private void SetGameMenuOpen(bool open)
 	{
 		gameMenu.Visible = open;
 		interactionRequested = false;
+		if (open)
+			StopRepair();
 		Input.MouseMode = open ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
 		if (open)
 			resumeButton.GrabFocus();
