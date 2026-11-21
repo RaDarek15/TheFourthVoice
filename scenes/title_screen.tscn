@@ -150,7 +150,7 @@ text = "Your flashlight can give you away."
 autowrap_mode = 2
 
 [node name="Actions" type="VBoxContainer" parent="Content"]
-custom_minimum_size = Vector2(218, 0)
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 10
@@ -160,7 +160,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 focus_neighbor_top = NodePath("../Quit")
-focus_neighbor_bottom = NodePath("../Quit")
+focus_neighbor_bottom = NodePath("../Host")
 theme_override_colors/font_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_colors/font_focus_color = Color(0.05, 0.08, 0.06, 1)
 theme_override_colors/font_hover_color = Color(0.05, 0.08, 0.06, 1)
@@ -174,11 +174,61 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_secondary")
 text = "Start game"
 alignment = 0
 
-[node name="Quit" type="Button" parent="Content/Actions"]
+[node name="Host" type="Button" parent="Content/Actions"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 focus_neighbor_top = NodePath("../Start")
+focus_neighbor_bottom = NodePath("../JoinRow/HostAddress")
+theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
+theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+text = "Host LAN game"
+alignment = 0
+
+[node name="JoinRow" type="HBoxContainer" parent="Content/Actions"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HostAddress" type="LineEdit" parent="Content/Actions/JoinRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(175, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_top = NodePath("../../Host")
+focus_neighbor_right = NodePath("../Join")
+focus_neighbor_bottom = NodePath("../../Quit")
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+theme_override_font_sizes/font_size = 16
+placeholder_text = "Host IP address"
+max_length = 45
+
+[node name="Join" type="Button" parent="Content/Actions/JoinRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(81, 46)
+layout_mode = 2
+focus_neighbor_top = NodePath("../../Host")
+focus_neighbor_left = NodePath("../HostAddress")
+focus_neighbor_bottom = NodePath("../../Quit")
+theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
+theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_secondary_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+text = "Join"
+
+[node name="Quit" type="Button" parent="Content/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_neighbor_top = NodePath("../JoinRow/Join")
 focus_neighbor_bottom = NodePath("../Start")
 theme_override_colors/font_color = Color(0.75, 0.81, 0.75, 1)
 theme_override_colors/font_focus_color = Color(0.95, 0.96, 0.91, 1)
@@ -201,6 +251,6 @@ offset_bottom = -20.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.67, 0.74, 0.68, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD move   ·   Mouse look   ·   V flashlight"
+text = "WASD move   ·   Mouse look   ·   V flashlight   ·   F8 menu"
 autowrap_mode = 2
 vertical_alignment = 1
