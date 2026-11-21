@@ -5,8 +5,23 @@ public partial class Player : CharacterBody3D
 	[Export] public float Speed = 5f;
 	[Export] public float MouseSensitivity = 0.002f;
 
+	[Export] public PackedScene PhoneModel;
+	[Export] public PackedScene FlashlightModel;
+	[Export] public StyleBox SelectedSlotStyle;
+
+	private AnimationPlayer animator;
 	private SpotLight3D flashlight;
 	private Node3D head;
+	private Node3D phoneItem;
+	private Node3D flashlightItem;
+	private StyleBox normalSlotStyle;
+	private PanelContainer phoneSlot;
+	private PanelContainer flashlightSlot;
+	private RayCast3D interactionRay;
+	private Label interactionHint;
+	private bool flashlightPowered = true;
+	private bool holdingFlashlight;
+	private bool interactionRequested;
 	private AnimationPlayer avatarAnimation;
 	private Vector3 targetPosition;
 	private float targetYaw;
@@ -30,6 +45,47 @@ public partial class Player : CharacterBody3D
 	{
 		head = GetNode<Node3D>("Head");
 		flashlight = GetNode<SpotLight3D>("Head/Flashlight");
+		interactionRay = GetNode<RayCast3D>("Head/Camera3D/InteractionRay");
+		interactionRay.AddException(this);
+		interactionHint = GetNode<Label>("HUD/InteractionHint");
+		phoneSlot = GetNode<PanelContainer>("HUD/Hotbar/Phone");
+		flashlightSlot = GetNode<PanelContainer>("HUD/Hotbar/Flashlight");
+		normalSlotStyle = phoneSlot.GetThemeStylebox("panel");
+
+		animator = GetNode<AnimationPlayer>("Model/AnimationPlayer");
+		foreach (string clip in new[] { "Idle", "Walk", "Run" })
+			animator.GetAnimation(clip).LoopMode = Animation.LoopModeEnum.Linear;
+		animator.Play("Idle");
+
+		var skeleton = GetNode<Skeleton3D>("Model/Player/Skeleton3D");
+		var grip = skeleton.GetNode<Node3D>("Hand_R/FlashlightSocket");
+		skeleton.AddChild(new HeldItemPose { Head = head, GripToWrist = grip.Transform.AffineInverse() });
+
+		phoneItem = PhoneModel.Instantiate<Node3D>();
+		phoneItem.Position = new Vector3(0f, 0.05f, 0.015f);
+		phoneItem.Rotation = new Vector3(-0.22f, Mathf.Pi, 0.18f);
+		grip.AddChild(phoneItem);
+
+		flashlightItem = FlashlightModel.Instantiate<Node3D>();
+		flashlightItem.RotateY(Mathf.Pi);
+		grip.AddChild(flashlightItem);
+		Node3D lens = flashlightItem.GetNode<Node3D>("Flashlight/LightOrigin");
+		flashlight.Reparent(lens, keepGlobalTransform: false);
+
+		EquipFlashlight(true);
+		Input.MouseMode = Input.MouseModeEnum.Captured;
+	}
+
+	private void EquipFlashlight(bool equip)
+	{
+		holdingFlashlight = equip;
+		flashlightItem.Visible = equip;
+		phoneItem.Visible = !equip;
+		flashlight.Visible = equip && flashlightPowered;
+		PanelContainer selected = equip ? flashlightSlot : phoneSlot;
+		PanelContainer stowed = equip ? phoneSlot : flashlightSlot;
+		stowed.AddThemeStyleboxOverride("panel", normalSlotStyle);
+		selected.AddThemeStyleboxOverride("panel", SelectedSlotStyle);
 		Camera3D camera = GetNode<Camera3D>("Head/Camera3D");
 		SetProcessUnhandledInput(IsLocalPlayer);
 		if (IsLocalPlayer)
@@ -72,9 +128,21 @@ public partial class Player : CharacterBody3D
 
 		if (@event.IsActionPressed("toggle_flashlight"))
 		{
-			flashlight.Visible = !flashlight.Visible;
+			if (holdingFlashlight)
+				flashlightPowered = !flashlightPowered;
+			else
+				flashlightPowered = true;
+			EquipFlashlight(true);
 			return;
 		}
+
+		if (@event.IsActionPressed("inventory_phone"))
+			EquipFlashlight(false);
+		if (@event.IsActionPressed("inventory_flashlight"))
+			EquipFlashlight(true);
+		if (@event.IsActionPressed("interact"))
+			interactionRequested = true;
+
 		if (@event is InputEventMouseMotion mouse &&
 			Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
@@ -102,10 +170,21 @@ public partial class Player : CharacterBody3D
 			head.Rotation = new Vector3(Mathf.Lerp(HeadPitch, targetPitch, weight), 0f, 0f);
 			return;
 		}
+		Vector2 input = Input.GetVector(
+			"move_left",
+			"move_right",
+			"move_forward",
+			"move_backward"
+		);
 
 		Vector3 velocity = Velocity;
 		if (!IsOnFloor())
 			velocity += GetGravity() * (float)delta;
+
+		bool sprinting = Input.IsActionPressed("sprint");
+		float speed = sprinting ? Speed * 1.5f : Speed;
+		velocity.X = direction.X * speed;
+		velocity.Z = direction.Z * speed;
 
 		Vector2 input = Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
 		Vector3 direction = Transform.Basis * new Vector3(input.X, 0f, input.Y);
@@ -113,6 +192,24 @@ public partial class Player : CharacterBody3D
 		velocity.Z = direction.Z * Speed;
 		Velocity = velocity;
 		MoveAndSlide();
+
+		Vector3 travel = GetRealVelocity();
+		travel.Y = 0f;
+		string clip = travel.LengthSquared() < 0.04f ? "Idle" : sprinting ? "Run" : "Walk";
+		if (animator.CurrentAnimation != clip)
+			animator.Play(clip, 0.16);
+
+		if (interactionRequested)
+			interactionRay.ForceRaycastUpdate();
+		HutDoor door = interactionRay.GetCollider() as HutDoor;
+		interactionHint.Visible = door != null;
+		if (door != null)
+		{
+			if (interactionRequested)
+				door.Toggle();
+			interactionHint.Text = door.InteractionHint;
+		}
+		interactionRequested = false;
 		Vector3 movement = GetRealVelocity();
 		IsWalking = IsOnFloor() && new Vector2(movement.X, movement.Z).LengthSquared() > 0.04f;
 	}
